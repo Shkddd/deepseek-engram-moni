@@ -4,7 +4,7 @@ deepseek-engram-moni
 
 ---
 
-# DeepSeek-V4-Ultra (Lite Implementation)
+DeepSeek-V4-Ultra (Lite Implementation)
 
 这是一个基于 PyTorch 实现的 **DeepSeek-V4** 核心架构高度精简版。本项目旨在演示现代大语言模型（LLM）中通过 **低秩压缩注意力 (MLA)**、**细粒度专家混合 (MoE)** 以及 **多 Token 预测 (MTP)** 实现的高性能架构方案。
 
