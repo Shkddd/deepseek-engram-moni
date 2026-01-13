@@ -1,0 +1,167 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class EngramMemoryModule(nn.Module):
+    """
+    模拟 DeepSeek 的 Engram 模块。
+    功能：基于 N-gram 哈希检索静态知识，并注入到模型流中。
+    """
+
+    def __init__(self, hidden_size, engram_vocab_size=100000, ngram_width=3, memory_dim=None):
+        super().__init__()
+        self.ngram_width = ngram_width
+        self.hidden_size = hidden_size
+        # 如果未指定，默认记忆维度与隐藏层一致，否则需要投影
+        self.memory_dim = memory_dim if memory_dim else hidden_size
+
+        # 1. 巨大的静态记忆表 (模拟存储在 CPU/Host 内存中的海量 N-gram 嵌入)
+        # 在实际 DeepSeek 实现中，这可能达到 TB 级别，并使用哈希冲突处理
+        self.memory_table = nn.Embedding(engram_vocab_size, self.memory_dim)
+
+        # 2. 融合层：用于将检索到的记忆向量投影并融合到 Transformer 流中
+        self.fusion_gate = nn.Sequential(
+            nn.Linear(hidden_size + self.memory_dim, hidden_size),
+            nn.Sigmoid()
+        )
+        self.memory_proj = nn.Linear(self.memory_dim, hidden_size)
+
+    def get_ngram_hashes(self, input_ids):
+        """
+        简单的 N-gram 哈希模拟。
+        将当前 token 及其前 n-1 个 token 组合成一个 hash 值。
+        """
+        batch_size, seq_len = input_ids.shape
+        # 为了演示，我们用一个简单的滚动窗口和取模运算模拟哈希
+        # 实际中会使用高效的 C++ 哈希函数 (如 CityHash/MurmurHash)
+
+        hashes = torch.zeros_like(input_ids)
+
+        # 简单的滑动窗口模拟
+        padded_input = F.pad(input_ids, (self.ngram_width - 1, 0), value=0)
+
+        for i in range(seq_len):
+            # 获取当前位置的 n-gram 窗口
+            window = padded_input[:, i: i + self.ngram_width]
+            # 模拟哈希：简单的加权求和取模
+            # hash = (t_1 * p^0 + t_2 * p^1 + ... ) % vocab_size
+            window_hash = (window * torch.tensor([1, 137, 137 ** 2], device=input_ids.device)).sum(dim=1)
+            hashes[:, i] = window_hash % self.memory_table.num_embeddings
+
+        return hashes
+
+    def forward(self, hidden_states, input_ids):
+        """
+        Args:
+            hidden_states: Transformer 当前层的输出 (Batch, Seq, Hidden)
+            input_ids: 原始 token id (Batch, Seq)
+        """
+        # 1. N-gram 检索 (Retrieve)
+        # 计算当前位置的 N-gram hash
+        ngram_hashes = self.get_ngram_hashes(input_ids)
+
+        # 查表获取静态记忆向量 (Batch, Seq, Memory_Dim)
+        memory_embeds = self.memory_table(ngram_hashes)
+
+        # 2. 融合 (Fuse)
+        # 计算门控系数：模型决定多少信息来自记忆，多少保留原有推理
+        # 拼接 hidden_state 和 memory_embeds
+        combined = torch.cat([hidden_states, memory_embeds], dim=-1)
+        gate = self.fusion_gate(combined)  # (Batch, Seq, Hidden)
+
+        # 投影记忆向量以匹配维度
+        projected_memory = self.memory_proj(memory_embeds)
+
+        # 融合公式： h_new = h_old + gate * memory
+        # 或者是: h_new = (1 - gate) * h_old + gate * memory (视具体实现而定)
+        # 这里采用残差连接式的注入
+        output = hidden_states + gate * projected_memory
+
+        return output
+
+
+class SimpleTransformerBlock(nn.Module):
+    """标准的 Transformer 块 (简化版)"""
+
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.attn = nn.MultiheadAttention(hidden_size, num_heads=4, batch_first=True)
+        self.ln1 = nn.LayerNorm(hidden_size)
+        self.ffn = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size * 4),
+            nn.GELU(),
+            nn.Linear(hidden_size * 4, hidden_size)
+        )
+        self.ln2 = nn.LayerNorm(hidden_size)
+
+    def forward(self, x):
+        # Attention
+        attn_out, _ = self.attn(x, x, x)
+        x = self.ln1(x + attn_out)
+        # FFN
+        ffn_out = self.ffn(x)
+        x = self.ln2(x + ffn_out)
+        return x
+
+
+class DeepSeekV4_Simulated(nn.Module):
+    """
+    模拟集成 Engram 的 DeepSeek 模型架构。
+    Engram 通常被放置在网络的早期层（例如前 1/4 处），
+    用于在深层推理开始前补充静态知识。
+    """
+
+    def __init__(self, vocab_size=50000, hidden_size=512, num_layers=6):
+        super().__init__()
+        self.token_embedding = nn.Embedding(vocab_size, hidden_size)
+
+        self.layers = nn.ModuleList([
+            SimpleTransformerBlock(hidden_size) for _ in range(num_layers)
+        ])
+
+        # 将 Engram 模块插入在第 2 层之后 (早期层)
+        self.engram_layer_index = 1
+        self.engram_module = EngramMemoryModule(hidden_size, engram_vocab_size=100000, ngram_width=3)
+
+        self.final_ln = nn.LayerNorm(hidden_size)
+        self.lm_head = nn.Linear(hidden_size, vocab_size)
+
+    def forward(self, input_ids):
+        x = self.token_embedding(input_ids)
+
+        for i, layer in enumerate(self.layers):
+            x = layer(x)
+
+            # 在指定层注入 Engram 记忆
+            if i == self.engram_layer_index:
+                # print(f"--- Injecting Engram Memory at Layer {i+1} ---")
+                x = self.engram_module(x, input_ids)
+
+        x = self.final_ln(x)
+        logits = self.lm_head(x)
+        return logits
+
+
+# --- 模拟运行 ---
+
+# 初始化模型
+model = DeepSeekV4_Simulated()
+
+# 模拟输入: "DeepSeek introduces the new Engram module"
+# 假设 token ids
+input_ids = torch.tensor([[101, 2543, 892, 12, 45, 999, 321, 102]])
+
+print(f" input_ids {input_ids}, Input shape:{input_ids.shape}" )
+
+# 前向传播
+logits = model(input_ids)
+
+print(f"Output logits {logits}，logits shape:{logits.shape}")
+
+# 验证 Engram 内部机制
+print("\n--- Engram Module Internals ---")
+engram = model.engram_module
+hashes = engram.get_ngram_hashes(input_ids)
+print(f" hashes {hashes} Generated 3-gram hashes (indices for lookup): {hashes[0].tolist()}")
+print("Note: 这些哈希值对应于静态知识库中的条目，例如 'DeepSeek introduces' 可能对应哈希值 45212")
