@@ -1,0 +1,218 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import List, Tuple, Optional
+
+
+# --- 1. 全局配置 ---
+class UltraConfig:
+    vocab_size = 32000
+    hidden_size = 512
+    n_layers = 8
+    engram_layers = [0]
+    latent_dim = 128
+    n_heads = 8
+    n_experts = 16
+    top_k_experts = 2
+    aux_loss_weight = 0.01
+    engram_mem_size = 10000
+    mtp_depth = 2
+    max_seq_len = 1024
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+# --- 2. RoPE 旋转位置编码 ---
+def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0):
+    freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim))
+    t = torch.arange(end)
+    freqs = torch.outer(t, freqs).float()
+    freqs_cis = torch.polar(torch.ones_like(freqs), freqs)
+    return freqs_cis
+
+
+def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor):
+    # x: [b, s, n_h, d]
+    x_complex = torch.view_as_complex(x.float().reshape(*x.shape[:-1], -1, 2))
+    freqs_cis = freqs_cis.view(1, x.shape[1], 1, -1)
+    x_rotated = torch.view_as_real(x_complex * freqs_cis).flatten(3)
+    return x_rotated.type_as(x)
+
+
+# --- 3. MLA 层 ---
+class MLALayer(nn.Module):
+    def __init__(self, cfg: UltraConfig):
+        super().__init__()
+        self.cfg = cfg
+        self.d_head = cfg.hidden_size // cfg.n_heads
+        self.kv_compress = nn.Linear(cfg.hidden_size, cfg.latent_dim)
+        self.ln_latent = nn.LayerNorm(cfg.latent_dim)
+        self.up_proj = nn.Linear(cfg.latent_dim, cfg.n_heads * self.d_head * 2)
+        self.q_proj = nn.Linear(cfg.hidden_size, cfg.hidden_size)
+
+    def forward(self, x: torch.Tensor, freqs_cis: torch.Tensor, mask: Optional[torch.Tensor] = None):
+        b, s, _ = x.shape
+        latent = self.ln_latent(self.kv_compress(x))
+        kv = self.up_proj(latent).view(b, s, self.cfg.n_heads, 2 * self.d_head)
+        k, v = kv.chunk(2, dim=-1)
+        q = self.q_proj(x).view(b, s, self.cfg.n_heads, self.d_head)
+
+        q = apply_rotary_emb(q, freqs_cis)
+        k = apply_rotary_emb(k, freqs_cis)
+
+        scores = torch.einsum("bshd, bthd -> bhst", q, k) * (self.d_head ** -0.5)
+        if mask is not None:
+            scores = scores + mask
+        attn = F.softmax(scores, dim=-1)
+        out = torch.einsum("bhst, bthd -> bshd", attn, v)
+        return out.reshape(b, s, -1)
+
+
+# --- 4. MoE 层 (修复了 Runtime误差) ---
+
+class UltraMoE(nn.Module):
+    def __init__(self, cfg: UltraConfig):
+        super().__init__()
+        self.cfg = cfg
+        self.shared_expert = nn.Sequential(
+            nn.Linear(cfg.hidden_size, cfg.hidden_size * 2),
+            nn.SiLU(),
+            nn.Linear(cfg.hidden_size * 2, cfg.hidden_size)
+        )
+        self.experts = nn.ModuleList([
+            nn.Sequential(nn.Linear(cfg.hidden_size, cfg.hidden_size), nn.SiLU(),
+                          nn.Linear(cfg.hidden_size, cfg.hidden_size))
+            for _ in range(cfg.n_experts)
+        ])
+        self.router = nn.Linear(cfg.hidden_size, cfg.n_experts)
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        b, s, h = x.shape
+        logits = self.router(x)
+        probs = F.softmax(logits, dim=-1)
+
+        # --- 修复位置：先转换 float 再求 mean ---
+        me = torch.mean(probs, dim=(0, 1))
+        # 修正：probs > 0 得到 bool，必须 .float() 才能 mean
+        ce = torch.mean((probs > 1e-6).float(), dim=(0, 1))
+        aux_loss = torch.sum(me * ce) * self.cfg.n_experts  # 典型的负载均衡 Loss
+
+        top_probs, top_idx = torch.topk(probs, self.cfg.top_k_experts, dim=-1)
+
+        combined_out = torch.zeros_like(x)
+        x_flat = x.view(-1, h)
+        top_idx_flat = top_idx.view(-1, self.cfg.top_k_experts)
+        top_probs_flat = top_probs.view(-1, self.cfg.top_k_experts)
+
+        for i in range(self.cfg.top_k_experts):
+            idx = top_idx_flat[:, i]
+            w = top_probs_flat[:, i].unsqueeze(-1)
+            for j in range(self.cfg.n_experts):
+                mask = (idx == j)
+                if mask.any():
+                    combined_out.view(-1, h)[mask] += self.experts[j](x_flat[mask]) * w[mask]
+
+        return self.shared_expert(x) + combined_out, aux_loss
+
+
+# --- 5. Dynamic Engram (CPU 存储) ---
+class DynamicEngram(nn.Module):
+    def __init__(self, cfg: UltraConfig):
+        super().__init__()
+        self.cfg = cfg
+        self.mem_keys = torch.randn(cfg.engram_mem_size, 64)
+        self.mem_values = torch.randn(cfg.engram_mem_size, cfg.hidden_size)
+        self.query_proj = nn.Linear(cfg.hidden_size, 64)
+        self.gate = nn.Sequential(nn.Linear(cfg.hidden_size * 2, 1), nn.Sigmoid())
+
+    def forward(self, x: torch.Tensor):
+        b, s, h = x.shape
+        q_cpu = self.query_proj(x).detach().cpu()
+        scores = torch.matmul(q_cpu, self.mem_keys.T)
+        _, idx = torch.topk(scores, k=1)
+        retrieved_v = self.mem_values[idx.squeeze(-1)].to(x.device)
+        g = self.gate(torch.cat([x, retrieved_v], dim=-1))
+        return x + g * retrieved_v
+
+
+# --- 6. Transformer Block ---
+class DeepSeekBlock(nn.Module):
+    def __init__(self, cfg: UltraConfig):
+        super().__init__()
+        self.mla = MLALayer(cfg)
+        self.moe = UltraMoE(cfg)
+        self.ln1 = nn.LayerNorm(cfg.hidden_size)
+        self.ln2 = nn.LayerNorm(cfg.hidden_size)
+
+    def forward(self, x: torch.Tensor, freqs_cis: torch.Tensor, mask: torch.Tensor):
+        x = x + self.mla(self.ln1(x), freqs_cis, mask)
+        moe_out, aux_loss = self.moe(self.ln2(x))
+        x = x + moe_out
+        return x, aux_loss
+
+
+# --- 7. DeepSeekV4Ultra ---
+class DeepSeekV4Ultra(nn.Module):
+    def __init__(self, cfg: UltraConfig):
+        super().__init__()
+        self.cfg = cfg
+        self.token_embed = nn.Embedding(cfg.vocab_size, cfg.hidden_size)
+        self.engram = DynamicEngram(cfg)
+        self.layers = nn.ModuleList([DeepSeekBlock(cfg) for _ in range(cfg.n_layers)])
+        self.ln_final = nn.LayerNorm(cfg.hidden_size)
+        self.main_head = nn.Linear(cfg.hidden_size, cfg.vocab_size)
+        self.mtp_layers = nn.ModuleList([nn.Linear(cfg.hidden_size, cfg.hidden_size) for _ in range(cfg.mtp_depth)])
+        self.mtp_head = nn.Linear(cfg.hidden_size, cfg.vocab_size)
+
+        # 预计算位置编码并确保在正确的设备
+        self.register_buffer("freqs_cis", precompute_freqs_cis(cfg.hidden_size // cfg.n_heads, cfg.max_seq_len))
+
+    def forward(self, input_ids: torch.Tensor):
+        b, s = input_ids.shape
+        x = self.token_embed(input_ids)
+        mask = torch.full((s, s), float("-inf"), device=x.device)
+        mask = torch.triu(mask, diagonal=1)
+
+        total_aux_loss = 0
+        current_freqs = self.freqs_cis[:s]
+
+        for i, layer in enumerate(self.layers):
+            if i in self.cfg.engram_layers:
+                x = self.engram(x)
+            x, aux_loss = layer(x, current_freqs, mask)
+            total_aux_loss += aux_loss
+
+        h = self.ln_final(x)
+        logits = self.main_head(h)
+
+        mtp_logits = []
+        curr_mtp = h
+        for mtp_layer in self.mtp_layers:
+            curr_mtp = torch.tanh(mtp_layer(curr_mtp))
+            mtp_logits.append(self.mtp_head(curr_mtp))
+
+        return logits, mtp_logits, total_aux_loss
+
+
+# --- 8. 运行验证 ---
+if __name__ == "__main__":
+    config = UltraConfig()
+    model = DeepSeekV4Ultra(config).to(config.device)
+
+    # 模拟输入 [Batch=2, Seq=32]
+    dummy_input = torch.randint(0, config.vocab_size, (2, 32)).to(config.device)
+    dummy_labels = torch.randint(0, config.vocab_size, (2, 32)).to(config.device)
+
+    # 执行前向传播
+    main_logits, mtp_outputs, aux_loss = model(dummy_input)
+
+    # Loss 计算演示
+    main_loss = F.cross_entropy(main_logits.view(-1, config.vocab_size), dummy_labels.view(-1))
+    total_loss = main_loss + config.aux_loss_weight * aux_loss
+
+    print("-" * 30)
+    print("DeepSeek-V4-Ultra 启动成功!")
+    print(f"当前设备: {config.device}")
+    print(f"主 Loss: {main_loss.item():.4f}")
+    print(f"MoE 辅助 Loss: {aux_loss.item():.4f}")
+    print(f"MTP 输出数量: {len(mtp_outputs)}")
+    print("-" * 30)
