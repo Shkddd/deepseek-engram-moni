@@ -1,6 +1,5 @@
 # deepseek-engram-moni
 deepseek-engram-moni
-这份代码已经非常接近工业级研究原型的水准。为了让这个项目看起来更专业，我为你撰写了一份 **README.md**。它不仅解释了代码如何运行，还从架构师的角度阐述了 **MLA**、**MoE** 和 **MTP** 的设计哲学。
 
 ---
 
