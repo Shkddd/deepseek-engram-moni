@@ -14,8 +14,11 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BarChart, PieChart, LineChart } from 'react-native-chart-kit';
 
 const Stack = createStackNavigator();
 
@@ -201,6 +204,7 @@ function HomeScreen({ navigation }) {
 // 统计屏幕
 function StatsScreen() {
   const [habits, setHabits] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadHabits();
@@ -212,8 +216,10 @@ function StatsScreen() {
       if (stored) {
         setHabits(JSON.parse(stored));
       }
+      setLoading(false);
     } catch (error) {
       console.error('加载失败:', error);
+      setLoading(false);
     }
   };
 
@@ -221,41 +227,212 @@ function StatsScreen() {
   const avgStreak = habits.length > 0 
     ? (habits.reduce((sum, h) => sum + h.streak, 0) / habits.length).toFixed(1)
     : 0;
+  const completedHabits = habits.filter(h => h.streak > 0).length;
+  const completionRate = habits.length > 0 
+    ? ((completedHabits / habits.length) * 100).toFixed(0)
+    : 0;
+
+  // 柱状图数据 - 每个习惯的打卡次数
+  const chartData = {
+    labels: habits.slice(0, 6).map(h => h.name.length > 6 ? h.name.substring(0, 6) + '...' : h.name),
+    datasets: [{
+      data: habits.slice(0, 6).map(h => h.totalCheckins)
+    }]
+  };
+
+  // 饼图数据 - 完成 vs 未完成
+  const pieData = [
+    {
+      name: '已完成习惯',
+      population: completedHabits,
+      color: '#28a745',
+      legendFontColor: '#333',
+      legendFontSize: 12,
+    },
+    {
+      name: '未开始习惯',
+      population: habits.length - completedHabits,
+      color: '#dc3545',
+      legendFontColor: '#333',
+      legendFontSize: 12,
+    },
+  ];
+
+  // 折线图数据 - 连胜趋势（模拟）
+  const lineData = {
+    labels: habits.length > 0 ? ['第 1 周', '第 2 周', '第 3 周', '第 4 周'] : [],
+    datasets: [{
+      data: habits.length > 0 
+        ? [
+            Math.floor(habits.reduce((sum, h) => sum + h.streak, 0) * 0.1),
+            Math.floor(habits.reduce((sum, h) => sum + h.streak, 0) * 0.3),
+            Math.floor(habits.reduce((sum, h) => sum + h.streak, 0) * 0.6),
+            habits.reduce((sum, h) => sum + h.streak, 0)
+          ]
+        : []
+    }]
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#667eea" />
+          <Text style={styles.loadingText}>加载统计数据...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-      <View style={styles.statsFull}>
-        <Text style={styles.statsTitle}>📊 数据统计</Text>
-        
-        <View style={styles.bigStats}>
-          <View style={styles.bigStatBox}>
-            <Text style={styles.bigStatNumber}>{habits.length}</Text>
-            <Text style={styles.bigStatLabel}>习惯总数</Text>
+      <ScrollView style={styles.statsScroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.statsFull}>
+          <Text style={styles.statsTitle}>📊 数据统计</Text>
+          
+          {/* 核心指标 */}
+          <View style={styles.bigStats}>
+            <View style={styles.bigStatBox}>
+              <Text style={styles.bigStatNumber}>{habits.length}</Text>
+              <Text style={styles.bigStatLabel}>习惯总数</Text>
+            </View>
+            <View style={styles.bigStatBox}>
+              <Text style={styles.bigStatNumber}>{totalCheckins}</Text>
+              <Text style={styles.bigStatLabel}>总打卡</Text>
+            </View>
+            <View style={styles.bigStatBox}>
+              <Text style={styles.bigStatNumber}>{avgStreak}</Text>
+              <Text style={styles.bigStatLabel}>平均连胜</Text>
+            </View>
           </View>
-          <View style={styles.bigStatBox}>
-            <Text style={styles.bigStatNumber}>{totalCheckins}</Text>
-            <Text style={styles.bigStatLabel}>总打卡次数</Text>
-          </View>
-          <View style={styles.bigStatBox}>
-            <Text style={styles.bigStatNumber}>{avgStreak}</Text>
-            <Text style={styles.bigStatLabel}>平均连续天数</Text>
-          </View>
-        </View>
 
-        <Text style={styles.sectionTitle}>习惯详情</Text>
-        {habits.map((habit) => (
-          <View key={habit.id} style={styles.detailCard}>
-            <Text style={styles.detailName}>{habit.name}</Text>
-            <Text style={styles.detailStats}>
-              连续：{habit.streak}天 | 总打卡：{habit.totalCheckins}次
-            </Text>
+          {/* 完成率 */}
+          <View style={styles.completionCard}>
+            <Text style={styles.completionTitle}>📈 习惯完成率</Text>
+            <View style={styles.completionRow}>
+              <Text style={styles.completionPercent}>{completionRate}%</Text>
+              <View style={styles.completionBar}>
+                <View style={[styles.completionFill, { width: `${completionRate}%` }]} />
+              </View>
+            </View>
+            <Text style={styles.completionSubtext}>{completedHabits}/{habits.length} 习惯已坚持</Text>
           </View>
-        ))}
-        {habits.length === 0 && (
-          <Text style={styles.emptyText}>暂无数据</Text>
-        )}
-      </View>
+
+          {/* 柱状图 */}
+          {habits.length > 0 && (
+            <View style={styles.chartContainer}>
+              <Text style={styles.chartTitle}>🏆 打卡次数排行</Text>
+              <BarChart
+                data={chartData}
+                width={Dimensions.get('window').width - 60}
+                height={220}
+                yAxisLabel=""
+                yAxisSuffix="次"
+                chartConfig={{
+                  backgroundColor: '#667eea',
+                  backgroundGradientFrom: '#667eea',
+                  backgroundGradientTo: '#7c8ff0',
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  style: {
+                    borderRadius: 16,
+                  },
+                  propsForDots: {
+                    r: '6',
+                    strokeWidth: '2',
+                    stroke: '#fff',
+                  },
+                }}
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16,
+                }}
+                showBarTops={true}
+                showValuesOnTopOfBars={true}
+              />
+            </View>
+          )}
+
+          {/* 饼图 */}
+          {habits.length > 0 && (
+            <View style={styles.chartContainer}>
+              <Text style={styles.chartTitle}>📊 习惯完成分布</Text>
+              <PieChart
+                data={pieData}
+                width={Dimensions.get('window').width - 60}
+                height={220}
+                chartConfig={{
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                }}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                absolute
+              />
+            </View>
+          )}
+
+          {/* 折线图 */}
+          {habits.length > 0 && (
+            <View style={styles.chartContainer}>
+              <Text style={styles.chartTitle}>📉 连胜增长趋势</Text>
+              <LineChart
+                data={lineData}
+                width={Dimensions.get('window').width - 60}
+                height={220}
+                yAxisLabel=""
+                yAxisSuffix="天"
+                chartConfig={{
+                  backgroundColor: '#667eea',
+                  backgroundGradientFrom: '#667eea',
+                  backgroundGradientTo: '#7c8ff0',
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  style: {
+                    borderRadius: 16,
+                  },
+                  propsForDots: {
+                    r: '6',
+                    strokeWidth: '2',
+                    stroke: '#fff',
+                  },
+                }}
+                bezier
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16,
+                }}
+              />
+            </View>
+          )}
+
+          {/* 习惯详情列表 */}
+          <Text style={styles.sectionTitle}>📋 习惯详情</Text>
+          {habits.map((habit) => (
+            <View key={habit.id} style={styles.detailCard}>
+              <View style={styles.detailHeader}>
+                <Text style={styles.detailName}>{habit.name}</Text>
+                <View style={styles.streakBadgeSmall}>
+                  <Text style={styles.streakTextSmall}>🔥 {habit.streak}天</Text>
+                </View>
+              </View>
+              <Text style={styles.detailStats}>
+                总打卡：{habit.totalCheckins}次 | 创建：{new Date(habit.createdAt).toLocaleDateString('zh-CN')}
+              </Text>
+            </View>
+          ))}
+          {habits.length === 0 && (
+            <View style={styles.emptyChartContainer}>
+              <Text style={styles.emptyChartIcon}>📊</Text>
+              <Text style={styles.emptyChartText}>还没有统计数据</Text>
+              <Text style={styles.emptyChartSubtext}>添加习惯并打卡后，这里会显示图表</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -445,8 +622,125 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   statsFull: {
-    flex: 1,
     padding: 20,
+    paddingBottom: 40,
+  },
+  statsScroll: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#667eea',
+  },
+  completionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  completionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  completionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  completionPercent: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#667eea',
+    marginRight: 15,
+    width: 80,
+  },
+  completionBar: {
+    flex: 1,
+    height: 12,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  completionFill: {
+    height: '100%',
+    backgroundColor: '#667eea',
+    borderRadius: 6,
+  },
+  completionSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'right',
+  },
+  chartContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    alignItems: 'center',
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+  },
+  emptyChartContainer: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginBottom: 20,
+  },
+  emptyChartIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  emptyChartText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  emptyChartSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  streakBadgeSmall: {
+    backgroundColor: '#fff3cd',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  streakTextSmall: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ff6b6b',
   },
   statsTitle: {
     fontSize: 24,
