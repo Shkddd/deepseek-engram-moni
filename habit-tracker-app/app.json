@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "习惯追踪器",
+    "slug": "habit-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#667eea"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.habittracker.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#667eea"
+      },
+      "package": "com.habittracker.app",
+      "versionCode": 1
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "description": "个人习惯养成追踪应用",
+      "eas": {
+        "projectId": "e1c639d6-487f-4ce1-a2d6-9d4cd73a90c5"
+      }
+    },
+    "plugins": [],
+    "owner": "jxnxnxn"
+  }
+}
