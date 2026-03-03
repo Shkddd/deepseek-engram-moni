@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,6 +20,7 @@ import {
   Image,
   Modal,
   Pressable,
+  Switch,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BarChart, PieChart, LineChart } from 'react-native-chart-kit';
@@ -28,22 +29,53 @@ import * as ImagePicker from 'expo-image-picker';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// 主题 Context
+const ThemeContext = createContext();
+
+// 主题配置
+const lightTheme = {
+  dark: false,
+  colors: {
+    background: '#F5F6F7',
+    card: '#FFFFFF',
+    text: '#1D2129',
+    textLight: '#86909C',
+    border: '#E5E6EB',
+    primary: '#3370FF',
+    primaryDark: '#1F4EDB',
+    success: '#00B365',
+    danger: '#F53F3F',
+    warning: '#FF7D00',
+    gray: '#F5F6F7',
+    inputBg: '#f9f9f9',
+  },
+};
+
+const darkTheme = {
+  dark: true,
+  colors: {
+    background: '#1A1A1A',
+    card: '#2D2D2D',
+    text: '#E8E8E8',
+    textLight: '#A0A0A0',
+    border: '#404040',
+    primary: '#4A8AFF',
+    primaryDark: '#3370FF',
+    success: '#00D97E',
+    danger: '#FF6B6B',
+    warning: '#FF9F43',
+    gray: '#2D2D2D',
+    inputBg: '#3D3D3D',
+  },
+};
+
 // 主屏幕 - 习惯列表
 function HomeScreen({ navigation }) {
   const [habits, setHabits] = useState([]);
   const [newHabit, setNewHabit] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
-  const feishuBlue = '#3370FF';
-  const feishuBlueDark = '#1F4EDB';
-  const feishuWhite = '#FFFFFF';
-  const feishuGray = '#F5F6F7';
-  const feishuText = '#1D2129';
-  const feishuTextLight = '#86909C';
-  const feishuGreen = '#00B365';
-  const feishuRed = '#F53F3F';
-  const feishuOrange = '#FF7D00';
+  const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
     loadHabits();
@@ -124,19 +156,19 @@ function HomeScreen({ navigation }) {
   const totalStreak = habits.reduce((sum, h) => sum + h.streak, 0);
 
   const renderHabit = ({ item }) => (
-    <View style={styles.habitCard}>
+    <View style={[styles.habitCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <View style={styles.habitHeader}>
-        <Text style={styles.habitName}>{item.name}</Text>
-        <View style={styles.streakBadge}>
-          <Text style={styles.streakText}>🔥 {item.streak}天</Text>
+        <Text style={[styles.habitName, { color: theme.colors.text }]}>{item.name}</Text>
+        <View style={[styles.streakBadge, { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }]}>
+          <Text style={[styles.streakText, { color: theme.colors.primary }]}>🔥 {item.streak}天</Text>
         </View>
       </View>
-      <Text style={styles.habitStats}>
+      <Text style={[styles.habitStats, { color: theme.colors.textLight }]}>
         总打卡：{item.totalCheckins}次 | 创建：{new Date(item.createdAt).toLocaleDateString('zh-CN')}
       </Text>
       <View style={styles.habitActions}>
         <TouchableOpacity
-          style={[styles.checkInButton, item.completedToday && styles.checkedButton]}
+          style={[styles.checkInButton, { backgroundColor: theme.colors.success }, item.completedToday && { backgroundColor: theme.colors.textLight }]}
           onPress={() => checkIn(item.id)}
           disabled={item.completedToday}
         >
@@ -145,20 +177,20 @@ function HomeScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.deleteButton}
+          style={[styles.deleteButton, { backgroundColor: theme.colors.gray, borderColor: theme.colors.border }]}
           onPress={() => deleteHabit(item.id)}
         >
-          <Text style={styles.deleteText}>删除</Text>
+          <Text style={[styles.deleteText, { color: theme.colors.danger }]}>删除</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={feishuBlue} />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.dark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.primary} />
       
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
         <View style={styles.statBox}>
           <Text style={styles.statNumber}>{totalHabits}</Text>
           <Text style={styles.statLabel}>总习惯</Text>
@@ -173,16 +205,16 @@ function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <View style={styles.addContainer}>
+      <View style={[styles.addContainer, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.colors.inputBg, borderColor: theme.colors.border, color: theme.colors.text }]}
           placeholder="输入新习惯..."
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.textLight}
           value={newHabit}
           onChangeText={setNewHabit}
           onSubmitEditing={addHabit}
         />
-        <TouchableOpacity style={styles.addButton} onPress={addHabit}>
+        <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.primary }]} onPress={addHabit}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -193,18 +225,18 @@ function HomeScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#667eea" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>还没有习惯</Text>
-            <Text style={styles.emptySubtext}>点击上方输入框添加第一个习惯</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textLight }]}>还没有习惯</Text>
+            <Text style={[styles.emptySubtext, { color: theme.colors.textLight }]}>点击上方输入框添加第一个习惯</Text>
           </View>
         }
       />
 
       <TouchableOpacity
-        style={styles.navButton}
+        style={[styles.navButton, { backgroundColor: theme.colors.primary }]}
         onPress={() => navigation.navigate('Stats')}
       >
         <Text style={styles.navButtonText}>📊 查看统计</Text>
@@ -217,6 +249,7 @@ function HomeScreen({ navigation }) {
 function StatsScreen() {
   const [habits, setHabits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { theme } = useContext(ThemeContext);
 
   // 使用 useFocusEffect 确保每次切换到统计页面时刷新数据
   useFocusEffect(
@@ -254,6 +287,11 @@ function StatsScreen() {
   const sortedHabits = Object.entries(habitCheckinMap)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
+  
+  // 计算纵坐标最大值和间隔
+  const maxCheckins = sortedHabits.length > 0 ? sortedHabits[0][1] : 10;
+  const yAxisInterval = Math.ceil(maxCheckins / 5); // 5 个刻度
+  
   const chartData = {
     labels: sortedHabits.map(([name]) => name.length > 8 ? name.substring(0, 8) + '...' : name),
     datasets: [{
@@ -288,13 +326,19 @@ function StatsScreen() {
     return dates;
   };
   const totalStreakSum = habits.reduce((sum, h) => sum + h.streak, 0);
+  const totalCheckinsSum = habits.reduce((sum, h) => sum + h.totalCheckins, 0);
   const daysToShow = Math.min(7, Math.max(1, Math.ceil(totalStreakSum / 5)));
+  
+  // 计算折线图纵坐标间隔
+  const lineMaxValue = totalCheckinsSum > 0 ? totalCheckinsSum : 10;
+  const lineYAxisInterval = Math.ceil(lineMaxValue / 5);
+  
   const lineData = {
     labels: getPastDates(daysToShow),
     datasets: [{
       data: Array.from({ length: daysToShow }, (_, i) => {
         const progress = (i + 1) / daysToShow;
-        return Math.floor(totalStreakSum * progress);
+        return Math.floor(totalCheckinsSum * progress);
       })
     }]
   };
@@ -352,6 +396,7 @@ function StatsScreen() {
                 height={220}
                 yAxisLabel=""
                 yAxisSuffix="次"
+                yAxisInterval={yAxisInterval}
                 chartConfig={{
                   backgroundColor: '#FFFFFF',
                   backgroundGradientFrom: '#FFFFFF',
@@ -404,7 +449,8 @@ function StatsScreen() {
                 width={Dimensions.get('window').width - 60}
                 height={220}
                 yAxisLabel=""
-                yAxisSuffix="天"
+                yAxisSuffix="次"
+                yAxisInterval={lineYAxisInterval}
                 chartConfig={{
                   backgroundColor: '#FFFFFF',
                   backgroundGradientFrom: '#FFFFFF',
@@ -705,12 +751,7 @@ function SettingsScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const feishuBlue = '#3370FF';
-  const feishuWhite = '#FFFFFF';
-  const feishuGray = '#F5F6F7';
-  const feishuText = '#1D2129';
-  const feishuTextLight = '#86909C';
+  const { darkMode, toggleDarkMode, theme } = useContext(ThemeContext);
 
   useEffect(() => {
     loadSettings();
@@ -810,53 +851,74 @@ function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={feishuWhite} />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.card} />
       <ScrollView style={styles.settingsScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.settingsContent}>
-          <Text style={styles.settingsTitle}>⚙️ 设置</Text>
+          <Text style={[styles.settingsTitle, { color: theme.colors.text }]}>⚙️ 设置</Text>
 
           <View style={styles.settingsSection}>
-            <Text style={styles.sectionHeader}>👤 账户信息</Text>
+            <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>🌙 显示设置</Text>
+            
+            <View style={[styles.switchCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <View style={styles.switchRow}>
+                <View style={styles.switchContent}>
+                  <Text style={[styles.switchTitle, { color: theme.colors.text }]}>夜间模式</Text>
+                  <Text style={[styles.switchDesc, { color: theme.colors.textLight }]}>
+                    {darkMode ? '已开启，保护眼睛' : '已关闭，明亮主题'}
+                  </Text>
+                </View>
+                <Switch
+                  value={darkMode}
+                  onValueChange={toggleDarkMode}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                  thumbColor={darkMode ? theme.colors.primary : '#f4f3f4'}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.settingsSection}>
+            <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>👤 账户信息</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>用户名</Text>
+              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>用户名</Text>
               <TextInput
-                style={styles.settingsInput}
+                style={[styles.settingsInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, color: theme.colors.text }]}
                 placeholder="输入用户名"
-                placeholderTextColor={feishuTextLight}
+                placeholderTextColor={theme.colors.textLight}
                 value={username}
                 onChangeText={setUsername}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>密码</Text>
+              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>密码</Text>
               <TextInput
-                style={styles.settingsInput}
+                style={[styles.settingsInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, color: theme.colors.text }]}
                 placeholder="输入密码"
-                placeholderTextColor={feishuTextLight}
+                placeholderTextColor={theme.colors.textLight}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
               />
             </View>
 
-            <TouchableOpacity style={styles.saveButton} onPress={saveSettings}>
+            <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.colors.primary }]} onPress={saveSettings}>
               <Text style={styles.saveButtonText}>💾 保存设置</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.settingsSection}>
-            <Text style={styles.sectionHeader}>📤 数据管理</Text>
+            <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>📤 数据管理</Text>
             
-            <View style={styles.exportCard}>
-              <Text style={styles.exportTitle}>导出所有数据</Text>
-              <Text style={styles.exportDesc}>
+            <View style={[styles.exportCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Text style={[styles.exportTitle, { color: theme.colors.text }]}>导出所有数据</Text>
+              <Text style={[styles.exportDesc, { color: theme.colors.textLight }]}>
                 将习惯记录和记事本内容导出为 Markdown 文件，方便备份和分享
               </Text>
               <TouchableOpacity 
-                style={[styles.exportButton, loading && styles.exportButtonDisabled]} 
+                style={[styles.exportButton, { backgroundColor: theme.colors.primary }, loading && styles.exportButtonDisabled]} 
                 onPress={exportData}
                 disabled={loading}
               >
@@ -868,10 +930,10 @@ function SettingsScreen() {
           </View>
 
           <View style={styles.settingsSection}>
-            <Text style={styles.sectionHeader}>ℹ️ 关于</Text>
-            <View style={styles.aboutCard}>
-              <Text style={styles.aboutText}>习惯追踪器 v1.0.0</Text>
-              <Text style={styles.aboutSubtext}>帮助你养成好习惯的工具</Text>
+            <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>ℹ️ 关于</Text>
+            <View style={[styles.aboutCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Text style={[styles.aboutText, { color: theme.colors.text }]}>习惯追踪器 v1.0.0</Text>
+              <Text style={[styles.aboutSubtext, { color: theme.colors.textLight }]}>帮助你养成好习惯的工具</Text>
             </View>
           </View>
         </View>
@@ -882,47 +944,87 @@ function SettingsScreen() {
 
 // 主应用
 export default function App() {
+  const [darkMode, setDarkMode] = useState(false);
+  const [themeLoaded, setThemeLoaded] = useState(false);
+
+  useEffect(() => {
+    loadTheme();
+  }, []);
+
+  const loadTheme = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('settings_darkmode');
+      if (saved !== null) {
+        setDarkMode(saved === 'true');
+      }
+      setThemeLoaded(true);
+    } catch (error) {
+      console.error('加载主题失败:', error);
+      setThemeLoaded(true);
+    }
+  };
+
+  const toggleDarkMode = async (value) => {
+    try {
+      setDarkMode(value);
+      await AsyncStorage.setItem('settings_darkmode', String(value));
+    } catch (error) {
+      console.error('保存主题失败:', error);
+    }
+  };
+
+  if (!themeLoaded) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#3370FF" />
+      </SafeAreaView>
+    );
+  }
+
+  const theme = darkMode ? darkTheme : lightTheme;
+
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        initialRouteName="Habits"
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: '#FFFFFF',
-            elevation: 2,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-          },
-          headerTintColor: '#1D2129',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontSize: 18,
-            color: '#1D2129',
-          },
-          headerTitleAlign: 'center',
-          tabBarStyle: {
-            backgroundColor: '#FFFFFF',
-            borderTopWidth: 1,
-            borderTopColor: '#E5E6EB',
-            elevation: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            paddingBottom: 8,
-            paddingTop: 8,
-            height: 60,
-          },
-          tabBarActiveTintColor: '#3370FF',
-          tabBarInactiveTintColor: '#86909C',
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: '600',
-          },
-        }}
-      >
+    <ThemeContext.Provider value={{ darkMode, toggleDarkMode, theme }}>
+      <NavigationContainer>
+        <Tab.Navigator
+          initialRouteName="Habits"
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: theme.colors.card,
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.1,
+              shadowRadius: 2,
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              fontSize: 18,
+              color: theme.colors.text,
+            },
+            headerTitleAlign: 'center',
+            tabBarStyle: {
+              backgroundColor: theme.colors.card,
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.border,
+              elevation: 8,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              paddingBottom: 8,
+              paddingTop: 8,
+              height: 60,
+            },
+            tabBarActiveTintColor: theme.colors.primary,
+            tabBarInactiveTintColor: theme.colors.textLight,
+            tabBarLabelStyle: {
+              fontSize: 12,
+              fontWeight: '600',
+            },
+          }}
+        >
         <Tab.Screen
           name="Habits"
           component={HomeScreen}
@@ -973,6 +1075,7 @@ export default function App() {
         />
       </Tab.Navigator>
     </NavigationContainer>
+  </ThemeContext.Provider>
   );
 }
 
@@ -1519,5 +1622,29 @@ const styles = StyleSheet.create({
   aboutSubtext: {
     fontSize: 13,
     color: '#86909C',
+  },
+  // 夜间模式开关样式
+  switchCard: {
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 15,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  switchContent: {
+    flex: 1,
+    marginRight: 15,
+  },
+  switchTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  switchDesc: {
+    fontSize: 13,
   },
 });
