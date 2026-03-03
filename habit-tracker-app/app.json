@@ -16,7 +16,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.habittracker.app"
+      "bundleIdentifier": "com.habittracker.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "需要相机权限进行视频通话",
+        "NSMicrophoneUsageDescription": "需要麦克风权限进行语音通话"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +28,15 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "com.habittracker.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CHANGE_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

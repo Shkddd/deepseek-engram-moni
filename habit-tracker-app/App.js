@@ -25,6 +25,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BarChart, PieChart, LineChart } from 'react-native-chart-kit';
 import * as ImagePicker from 'expo-image-picker';
+import ChatScreen from './ChatScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -1071,6 +1072,18 @@ export default function App() {
               <Text style={{ fontSize: 24 }}>⚙️</Text>
             ),
             headerTitle: '⚙️ 设置',
+          }}
+        />
+        <Tab.Screen
+          name="Chat"
+          component={ChatScreen}
+          options={{ 
+            title: '聊天',
+            tabBarLabel: '聊天',
+            tabBarIcon: ({ color, size }) => (
+              <Text style={{ fontSize: 24 }}>💬</Text>
+            ),
+            headerTitle: '💬 P2P 聊天',
           }}
         />
       </Tab.Navigator>
