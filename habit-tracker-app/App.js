@@ -232,11 +232,18 @@ function StatsScreen() {
     ? ((completedHabits / habits.length) * 100).toFixed(0)
     : 0;
 
-  // 柱状图数据 - 每个习惯的打卡次数
+  // 柱状图数据 - 按习惯名去重并求和
+  const habitCheckinMap = habits.reduce((acc, h) => {
+    acc[h.name] = (acc[h.name] || 0) + h.totalCheckins;
+    return acc;
+  }, {});
+  const sortedHabits = Object.entries(habitCheckinMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
   const chartData = {
-    labels: habits.slice(0, 6).map(h => h.name.length > 6 ? h.name.substring(0, 6) + '...' : h.name),
+    labels: sortedHabits.map(([name]) => name.length > 8 ? name.substring(0, 8) + '...' : name),
     datasets: [{
-      data: habits.slice(0, 6).map(h => h.totalCheckins)
+      data: sortedHabits.map(([, count]) => count)
     }]
   };
 
@@ -258,18 +265,25 @@ function StatsScreen() {
     },
   ];
 
-  // 折线图数据 - 连胜趋势（模拟）
+  // 折线图数据 - 基于真实日期的连胜趋势
+  const getPastDates = (days) => {
+    const dates = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(`${d.getMonth() + 1}/${d.getDate()}`);
+    }
+    return dates;
+  };
+  const totalStreakSum = habits.reduce((sum, h) => sum + h.streak, 0);
+  const daysToShow = Math.min(7, Math.max(1, Math.ceil(totalStreakSum / 5)));
   const lineData = {
-    labels: habits.length > 0 ? ['第 1 周', '第 2 周', '第 3 周', '第 4 周'] : [],
+    labels: getPastDates(daysToShow),
     datasets: [{
-      data: habits.length > 0 
-        ? [
-            Math.floor(habits.reduce((sum, h) => sum + h.streak, 0) * 0.1),
-            Math.floor(habits.reduce((sum, h) => sum + h.streak, 0) * 0.3),
-            Math.floor(habits.reduce((sum, h) => sum + h.streak, 0) * 0.6),
-            habits.reduce((sum, h) => sum + h.streak, 0)
-          ]
-        : []
+      data: Array.from({ length: daysToShow }, (_, i) => {
+        const progress = (i + 1) / daysToShow;
+        return Math.floor(totalStreakSum * progress);
+      })
     }]
   };
 
@@ -446,22 +460,44 @@ export default function App() {
         screenOptions={{
           headerStyle: {
             backgroundColor: '#667eea',
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
           },
           headerTintColor: '#fff',
           headerTitleStyle: {
             fontWeight: 'bold',
+            fontSize: 20,
+            letterSpacing: 1,
           },
+          headerTitleAlign: 'center',
         }}
       >
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{ title: '🎯 习惯追踪器' }}
+          options={{ 
+            title: '⚡ 习惯追踪器',
+            headerLeft: () => (
+              <View style={{ marginLeft: 15 }}>
+                <Text style={{ fontSize: 28 }}>🎯</Text>
+              </View>
+            ),
+          }}
         />
         <Stack.Screen
           name="Stats"
           component={StatsScreen}
-          options={{ title: '📊 统计报表' }}
+          options={{ 
+            title: '📊 统计报表',
+            headerLeft: () => (
+              <View style={{ marginLeft: 15 }}>
+                <Text style={{ fontSize: 28 }}>📈</Text>
+              </View>
+            ),
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>
