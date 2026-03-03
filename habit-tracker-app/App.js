@@ -31,6 +31,7 @@ import {
   enableDailyReminder,
   cancelDailyReminder,
 } from './NotificationService';
+import { calculateHabitScore } from './PredictionService';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -255,12 +256,14 @@ function HomeScreen({ navigation }) {
 function StatsScreen() {
   const [habits, setHabits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [habitScore, setHabitScore] = useState(null);
   const { theme } = useContext(ThemeContext);
 
   // 使用 useFocusEffect 确保每次切换到统计页面时刷新数据
   useFocusEffect(
     React.useCallback(() => {
       loadHabits();
+      loadHabitScore();
     }, [])
   );
 
@@ -274,6 +277,15 @@ function StatsScreen() {
     } catch (error) {
       console.error('加载失败:', error);
       setLoading(false);
+    }
+  };
+
+  const loadHabitScore = async () => {
+    try {
+      const scoreData = await calculateHabitScore();
+      setHabitScore(scoreData);
+    } catch (error) {
+      console.error('加载评分失败:', error);
     }
   };
 
@@ -366,6 +378,40 @@ function StatsScreen() {
       <ScrollView style={styles.statsScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.statsFull}>
           <Text style={styles.statsTitle}>📊 数据统计</Text>
+          
+          {/* 习惯评分卡片 */}
+          {habitScore && habitScore.score > 0 && (
+            <View style={[styles.scoreCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <View style={styles.scoreHeader}>
+                <Text style={[styles.scoreTitle, { color: theme.colors.text }]}>🎯 习惯健康评分</Text>
+                <Text style={[styles.scoreLevel, { color: theme.colors.primary }]}>{habitScore.level}</Text>
+              </View>
+              <View style={styles.scoreBody}>
+                <View style={styles.scoreCircle}>
+                  <Text style={[styles.scoreNumber, { color: theme.colors.primary }]}>{habitScore.score}</Text>
+                  <Text style={[styles.scoreMax, { color: theme.colors.textLight }]}>/100</Text>
+                </View>
+                <View style={styles.scoreFactors}>
+                  {habitScore.factors.slice(0, 3).map((factor, index) => (
+                    <View key={index} style={styles.factorRow}>
+                      <Text style={[styles.factorName, { color: theme.colors.textLight }]}>{factor.name}</Text>
+                      <View style={styles.factorBarBg}>
+                        <View style={[styles.factorBarFill, { width: `${(factor.score / factor.max) * 100}%`, backgroundColor: theme.colors.primary }]} />
+                      </View>
+                      <Text style={[styles.factorScore, { color: theme.colors.text }]}>{factor.score.toFixed(0)}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.predictionSection}>
+                <Text style={[styles.predictionTitle, { color: theme.colors.text }]}>📈 明日预测</Text>
+                <Text style={[styles.predictionProb, { color: theme.colors.primary }]}>完成概率: {habitScore.prediction.tomorrowProbability}%</Text>
+                {habitScore.prediction.suggestions.slice(0, 2).map((suggestion, index) => (
+                  <Text key={index} style={[styles.suggestionText, { color: theme.colors.textLight }]}>• {suggestion}</Text>
+                ))}
+              </View>
+            </View>
+          )}
           
           <View style={styles.bigStats}>
             <View style={styles.bigStatBox}>
@@ -1828,5 +1874,94 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  // 习惯评分样式
+  scoreCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  scoreHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  scoreTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  scoreLevel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  scoreBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  scoreCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8F3FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  scoreNumber: {
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  scoreMax: {
+    fontSize: 12,
+  },
+  scoreFactors: {
+    flex: 1,
+  },
+  factorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  factorName: {
+    fontSize: 11,
+    width: 50,
+  },
+  factorBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#E5E6EB',
+    borderRadius: 3,
+    marginHorizontal: 6,
+  },
+  factorBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  factorScore: {
+    fontSize: 11,
+    width: 20,
+    textAlign: 'right',
+  },
+  predictionSection: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E6EB',
+  },
+  predictionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  predictionProb: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  suggestionText: {
+    fontSize: 12,
+    lineHeight: 18,
   },
 });
