@@ -29,10 +29,16 @@ function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 飞书品牌色
-  const feishuBlue = '#3370FF';
-  const feishuBlueLight = '#598DFF';
-  const feishuBlueDark = '#285ACC';
+  // 飞书品牌色 - 高对比度配色
+  const feishuBlue = '#3370FF';      // 主蓝色
+  const feishuBlueDark = '#1F4EDB';  // 深蓝（强调）
+  const feishuWhite = '#FFFFFF';     // 纯白背景
+  const feishuGray = '#F5F6F7';      // 浅灰背景
+  const feishuText = '#1D2129';      // 深色文字
+  const feishuTextLight = '#86909C'; // 浅色文字
+  const feishuGreen = '#00B365';     // 成功色
+  const feishuRed = '#F53F3F';       // 警示色
+  const feishuOrange = '#FF7D00';    // 强调色
 
   useEffect(() => {
     loadHabits();
@@ -296,7 +302,7 @@ function StatsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#667eea" />
+          <ActivityIndicator size="large" color="#3370FF" />
           <Text style={styles.loadingText}>加载统计数据...</Text>
         </View>
       </SafeAreaView>
@@ -305,7 +311,7 @@ function StatsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#3370FF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <ScrollView style={styles.statsScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.statsFull}>
           <Text style={styles.statsTitle}>📊 数据统计</Text>
@@ -349,19 +355,19 @@ function StatsScreen() {
                 yAxisLabel=""
                 yAxisSuffix="次"
                 chartConfig={{
-                  backgroundColor: '#3370FF',
-                  backgroundGradientFrom: '#3370FF',
-                  backgroundGradientTo: '#598DFF',
+                  backgroundColor: '#FFFFFF',
+                  backgroundGradientFrom: '#FFFFFF',
+                  backgroundGradientTo: '#FFFFFF',
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  color: (opacity = 1) => `rgba(51, 112, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(29, 33, 41, ${opacity})`,
                   style: {
                     borderRadius: 16,
                   },
                   propsForDots: {
                     r: '6',
                     strokeWidth: '2',
-                    stroke: '#fff',
+                    stroke: '#3370FF',
                   },
                 }}
                 style={{
@@ -404,19 +410,19 @@ function StatsScreen() {
                 yAxisLabel=""
                 yAxisSuffix="天"
                 chartConfig={{
-                  backgroundColor: '#3370FF',
-                  backgroundGradientFrom: '#3370FF',
-                  backgroundGradientTo: '#598DFF',
+                  backgroundColor: '#FFFFFF',
+                  backgroundGradientFrom: '#FFFFFF',
+                  backgroundGradientTo: '#FFFFFF',
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  color: (opacity = 1) => `rgba(51, 112, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(29, 33, 41, ${opacity})`,
                   style: {
                     borderRadius: 16,
                   },
                   propsForDots: {
                     r: '6',
                     strokeWidth: '2',
-                    stroke: '#fff',
+                    stroke: '#3370FF',
                   },
                 }}
                 bezier
@@ -464,18 +470,18 @@ export default function App() {
         initialRouteName="Home"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#3370FF',
-            elevation: 4,
+            backgroundColor: '#FFFFFF',
+            elevation: 2,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#1D2129',
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 20,
-            letterSpacing: 1,
+            fontSize: 18,
+            color: '#1D2129',
           },
           headerTitleAlign: 'center',
         }}
@@ -512,13 +518,15 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F6F7',
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 15,
-    backgroundColor: '#3370FF',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E6EB',
   },
   statBox: {
     alignItems: 'center',
@@ -526,12 +534,11 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#3370FF',
   },
   statLabel: {
     fontSize: 12,
-    color: '#fff',
-    opacity: 0.9,
+    color: '#86909C',
   },
   addContainer: {
     flexDirection: 'row',
@@ -557,6 +564,11 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#3370FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   addButtonText: {
     fontSize: 28,
@@ -567,15 +579,17 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   habitCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     padding: 15,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   habitHeader: {
     flexDirection: 'row',
@@ -586,18 +600,20 @@ const styles = StyleSheet.create({
   habitName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1D2129',
   },
   streakBadge: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: '#E8F3FF',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3370FF',
   },
   streakText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#ff6b6b',
+    color: '#3370FF',
   },
   habitStats: {
     fontSize: 12,
@@ -610,28 +626,28 @@ const styles = StyleSheet.create({
   },
   checkInButton: {
     flex: 1,
-    backgroundColor: '#28a745',
+    backgroundColor: '#00B365',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
   },
   checkedButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: '#86909C',
   },
   checkInText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
   deleteButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: '#F53F3F',
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 8,
     justifyContent: 'center',
   },
   deleteText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -656,9 +672,14 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#3370FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   navButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -677,23 +698,25 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#3370FF',
+    color: '#1D2129',
   },
   completionCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   completionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1D2129',
     marginBottom: 15,
   },
   completionRow: {
@@ -704,20 +727,20 @@ const styles = StyleSheet.create({
   completionPercent: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#3370FF',
+    color: '#00B365',
     marginRight: 15,
     width: 80,
   },
   completionBar: {
     flex: 1,
     height: 12,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#E5E6EB',
     borderRadius: 6,
     overflow: 'hidden',
   },
   completionFill: {
     height: '100%',
-    backgroundColor: '#3370FF',
+    backgroundColor: '#00B365',
     borderRadius: 6,
   },
   completionSubtext: {
@@ -726,30 +749,34 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   chartContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     padding: 15,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
     alignItems: 'center',
   },
   chartTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1D2129',
     marginBottom: 10,
     alignSelf: 'flex-start',
   },
   emptyChartContainer: {
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
   },
   emptyChartIcon: {
     fontSize: 48,
@@ -757,13 +784,13 @@ const styles = StyleSheet.create({
   },
   emptyChartText: {
     fontSize: 16,
-    color: '#333',
+    color: '#1D2129',
     fontWeight: 'bold',
     marginBottom: 5,
   },
   emptyChartSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: '#86909C',
     textAlign: 'center',
   },
   detailHeader: {
@@ -773,20 +800,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   streakBadgeSmall: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: '#E8F3FF',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3370FF',
   },
   streakTextSmall: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#ff6b6b',
+    color: '#3370FF',
   },
   statsTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1D2129',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -796,22 +825,23 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   bigStatBox: {
-    backgroundColor: '#3370FF',
+    backgroundColor: '#FFFFFF',
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
     flex: 1,
     marginHorizontal: 5,
+    borderWidth: 2,
+    borderColor: '#3370FF',
   },
   bigStatNumber: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#3370FF',
   },
   bigStatLabel: {
     fontSize: 12,
-    color: '#fff',
-    opacity: 0.9,
+    color: '#86909C',
     marginTop: 5,
   },
   sectionTitle: {
@@ -821,19 +851,21 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   detailCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     padding: 15,
     borderRadius: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
   },
   detailName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1D2129',
     marginBottom: 5,
   },
   detailStats: {
     fontSize: 14,
-    color: '#666',
+    color: '#86909C',
   },
 });
