@@ -26,6 +26,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BarChart, PieChart, LineChart } from 'react-native-chart-kit';
 import * as ImagePicker from 'expo-image-picker';
 import ChatScreen from './ChatScreen';
+import {
+  requestNotificationPermission,
+  enableDailyReminder,
+  cancelDailyReminder,
+} from './NotificationService';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -753,9 +758,15 @@ function SettingsScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { darkMode, toggleDarkMode, theme } = useContext(ThemeContext);
+  
+  // 提醒功能状态
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderHour, setReminderHour] = useState(20);
+  const [reminderMinute, setReminderMinute] = useState(0);
 
   useEffect(() => {
     loadSettings();
+    loadReminderSettings();
   }, []);
 
   const loadSettings = async () => {
@@ -768,6 +779,56 @@ function SettingsScreen() {
       if (pass) setPassword(pass);
     } catch (error) {
       console.error('加载设置失败:', error);
+    }
+  };
+
+  const loadReminderSettings = async () => {
+    try {
+      const enabled = await AsyncStorage.getItem('reminder_enabled');
+      const hour = await AsyncStorage.getItem('reminder_hour');
+      const minute = await AsyncStorage.getItem('reminder_minute');
+      
+      setReminderEnabled(enabled === 'true');
+      setReminderHour(hour ? parseInt(hour) : 20);
+      setReminderMinute(minute ? parseInt(minute) : 0);
+    } catch (error) {
+      console.error('加载提醒设置失败:', error);
+    }
+  };
+
+  const toggleReminder = async (value) => {
+    try {
+      setReminderEnabled(value);
+      if (value) {
+        const hasPermission = await requestNotificationPermission();
+        if (!hasPermission) {
+          Alert.alert('权限不足', '需要通知权限才能使用提醒功能');
+          setReminderEnabled(false);
+          return;
+        }
+        await enableDailyReminder(reminderHour, reminderMinute);
+        Alert.alert('✓', `已开启每日 ${reminderHour}:${String(reminderMinute).padStart(2, '0')} 提醒`);
+      } else {
+        await cancelDailyReminder();
+        Alert.alert('✓', '已关闭每日提醒');
+      }
+    } catch (error) {
+      console.error('切换提醒失败:', error);
+      Alert.alert('错误', '设置提醒失败');
+    }
+  };
+
+  const updateReminderTime = async () => {
+    try {
+      if (reminderEnabled) {
+        await cancelDailyReminder();
+        await enableDailyReminder(reminderHour, reminderMinute);
+      }
+      await AsyncStorage.setItem('reminder_hour', String(reminderHour));
+      await AsyncStorage.setItem('reminder_minute', String(reminderMinute));
+      Alert.alert('✓', `提醒时间已设置为 ${reminderHour}:${String(reminderMinute).padStart(2, '0')}`);
+    } catch (error) {
+      console.error('更新提醒时间失败:', error);
     }
   };
 
@@ -877,6 +938,68 @@ function SettingsScreen() {
                 />
               </View>
             </View>
+          </View>
+
+          <View style={styles.settingsSection}>
+            <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>⏰ 习惯提醒</Text>
+            
+            <View style={[styles.switchCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <View style={styles.switchRow}>
+                <View style={styles.switchContent}>
+                  <Text style={[styles.switchTitle, { color: theme.colors.text }]}>每日打卡提醒</Text>
+                  <Text style={[styles.switchDesc, { color: theme.colors.textLight }]}>
+                    {reminderEnabled ? `每天 ${reminderHour}:${String(reminderMinute).padStart(2, '0')} 提醒` : '已关闭'}
+                  </Text>
+                </View>
+                <Switch
+                  value={reminderEnabled}
+                  onValueChange={toggleReminder}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                  thumbColor={reminderEnabled ? theme.colors.primary : '#f4f3f4'}
+                />
+              </View>
+            </View>
+
+            {reminderEnabled && (
+              <View style={styles.reminderTimeContainer}>
+                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>提醒时间</Text>
+                <View style={styles.timePickerRow}>
+                  <View style={styles.timePickerWrapper}>
+                    <Text style={[styles.timeLabel, { color: theme.colors.textLight }]}>时</Text>
+                    <TextInput
+                      style={[styles.timeInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, color: theme.colors.text }]}
+                      value={String(reminderHour)}
+                      onChangeText={(text) => {
+                        const val = parseInt(text) || 0;
+                        setReminderHour(Math.min(23, Math.max(0, val)));
+                      }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                    />
+                  </View>
+                  <Text style={[styles.timeSeparator, { color: theme.colors.text }]}>:</Text>
+                  <View style={styles.timePickerWrapper}>
+                    <Text style={[styles.timeLabel, { color: theme.colors.textLight }]}>分</Text>
+                    <TextInput
+                      style={[styles.timeInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, color: theme.colors.text }]}
+                      value={String(reminderMinute)}
+                      onChangeText={(text) => {
+                        const val = parseInt(text) || 0;
+                        setReminderMinute(Math.min(59, Math.max(0, val)));
+                      }}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.updateTimeButton, { backgroundColor: theme.colors.primary }]} 
+                    onPress={updateReminderTime}
+                  >
+                    <Text style={styles.updateTimeButtonText}>更新</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={styles.settingsSection}>
@@ -1659,5 +1782,51 @@ const styles = StyleSheet.create({
   },
   switchDesc: {
     fontSize: 13,
+  },
+  // 提醒时间选择样式
+  reminderTimeContainer: {
+    marginTop: 10,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E6EB',
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 10,
+  },
+  timePickerWrapper: {
+    alignItems: 'center',
+  },
+  timeLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  timeInput: {
+    width: 60,
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 10,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  timeSeparator: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    marginTop: 15,
+  },
+  updateTimeButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  updateTimeButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
