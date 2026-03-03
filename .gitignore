@@ -1,0 +1,26 @@
+# OpenClaw 工作空间 - GitIgnore
+
+# 敏感文件
+IMPORTANT_NOTES.md
+TOKEN*
+*.csv
+screenshot.png
+
+# 密钥
+.github_id_ed25519
+.github_id_ed25519.pub
+
+# OpenClaw 系统
+.openclaw/
+agents/
+
+# 临时文件
+*.tar.gz
+*.log
+token-state.json
+
+# 记忆文件
+memory/
+
+# Bootstrap
+BOOTSTRAP.md
