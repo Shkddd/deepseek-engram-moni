@@ -32,6 +32,8 @@ import {
   cancelDailyReminder,
 } from './NotificationService';
 import { calculateHabitScore } from './PredictionService';
+import { getAllAchievements, getAchievementStats, checkAndUnlockAchievements } from './AchievementService';
+import AchievementSection from './AchievementSection';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -1097,6 +1099,11 @@ function SettingsScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          <View style={styles.settingsSection}>
+            <Text style={[styles.sectionHeader, { color: theme.colors.text }]}>🏅 成就徽章</Text>
+            <AchievementSection theme={theme} />
           </View>
 
           <View style={styles.settingsSection}>
