@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# 敏感文件
+IMPORTANT_NOTES.md
+*.md
