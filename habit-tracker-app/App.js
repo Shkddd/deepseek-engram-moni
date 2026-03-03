@@ -29,6 +29,11 @@ function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // 飞书品牌色
+  const feishuBlue = '#3370FF';
+  const feishuBlueLight = '#598DFF';
+  const feishuBlueDark = '#285ACC';
+
   useEffect(() => {
     loadHabits();
   }, []);
@@ -140,7 +145,7 @@ function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+      <StatusBar barStyle="light-content" backgroundColor={feishuBlue} />
       
       {/* 统计卡片 */}
       <View style={styles.statsContainer}>
@@ -300,7 +305,7 @@ function StatsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+      <StatusBar barStyle="light-content" backgroundColor="#3370FF" />
       <ScrollView style={styles.statsScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.statsFull}>
           <Text style={styles.statsTitle}>📊 数据统计</Text>
@@ -344,9 +349,9 @@ function StatsScreen() {
                 yAxisLabel=""
                 yAxisSuffix="次"
                 chartConfig={{
-                  backgroundColor: '#667eea',
-                  backgroundGradientFrom: '#667eea',
-                  backgroundGradientTo: '#7c8ff0',
+                  backgroundColor: '#3370FF',
+                  backgroundGradientFrom: '#3370FF',
+                  backgroundGradientTo: '#598DFF',
                   decimalPlaces: 0,
                   color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                   labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -399,9 +404,9 @@ function StatsScreen() {
                 yAxisLabel=""
                 yAxisSuffix="天"
                 chartConfig={{
-                  backgroundColor: '#667eea',
-                  backgroundGradientFrom: '#667eea',
-                  backgroundGradientTo: '#7c8ff0',
+                  backgroundColor: '#3370FF',
+                  backgroundGradientFrom: '#3370FF',
+                  backgroundGradientTo: '#598DFF',
                   decimalPlaces: 0,
                   color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                   labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -459,7 +464,7 @@ export default function App() {
         initialRouteName="Home"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#667eea',
+            backgroundColor: '#3370FF',
             elevation: 4,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
@@ -513,7 +518,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 15,
-    backgroundColor: '#667eea',
+    backgroundColor: '#3370FF',
   },
   statBox: {
     alignItems: 'center',
@@ -547,7 +552,7 @@ const styles = StyleSheet.create({
   addButton: {
     width: 50,
     height: 50,
-    backgroundColor: '#667eea',
+    backgroundColor: '#3370FF',
     borderRadius: 10,
     marginLeft: 10,
     justifyContent: 'center',
@@ -646,7 +651,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   navButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#3370FF',
     margin: 15,
     padding: 15,
     borderRadius: 10,
@@ -672,7 +677,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#667eea',
+    color: '#3370FF',
   },
   completionCard: {
     backgroundColor: '#fff',
@@ -699,7 +704,7 @@ const styles = StyleSheet.create({
   completionPercent: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#667eea',
+    color: '#3370FF',
     marginRight: 15,
     width: 80,
   },
@@ -712,7 +717,7 @@ const styles = StyleSheet.create({
   },
   completionFill: {
     height: '100%',
-    backgroundColor: '#667eea',
+    backgroundColor: '#3370FF',
     borderRadius: 6,
   },
   completionSubtext: {
@@ -791,7 +796,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   bigStatBox: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#3370FF',
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
