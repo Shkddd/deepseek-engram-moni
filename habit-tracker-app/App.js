@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
   StyleSheet,
   Text,
@@ -21,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BarChart, PieChart, LineChart } from 'react-native-chart-kit';
 
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
 // 主屏幕 - 习惯列表
 function HomeScreen({ navigation }) {
@@ -462,12 +464,192 @@ function StatsScreen() {
   );
 }
 
+// 记事本屏幕
+function NotesScreen() {
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const feishuBlue = '#3370FF';
+  const feishuWhite = '#FFFFFF';
+  const feishuGray = '#F5F6F7';
+  const feishuText = '#1D2129';
+  const feishuTextLight = '#86909C';
+  const feishuGreen = '#00B365';
+  const feishuRed = '#F53F3F';
+
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  const loadNotes = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('notes');
+      if (stored) {
+        setNotes(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('加载笔记失败:', error);
+    }
+  };
+
+  const saveNotes = async (newNotes) => {
+    try {
+      await AsyncStorage.setItem('notes', JSON.stringify(newNotes));
+      setNotes(newNotes);
+    } catch (error) {
+      console.error('保存笔记失败:', error);
+      Alert.alert('错误', '保存失败');
+    }
+  };
+
+  const addNote = () => {
+    if (!newNote.trim()) {
+      Alert.alert('提示', '请输入笔记内容');
+      return;
+    }
+    const note = {
+      id: Date.now().toString(),
+      content: newNote.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    saveNotes([note, ...notes]);
+    setNewNote('');
+    Alert.alert('✓', '笔记已保存');
+  };
+
+  const deleteNote = (id) => {
+    Alert.alert(
+      '确认删除',
+      '确定要删除这条笔记吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: () => {
+            const updated = notes.filter((n) => n.id !== id);
+            saveNotes(updated);
+          },
+        },
+      ]
+    );
+  };
+
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) {
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      if (hours === 0) {
+        const mins = Math.floor(diff / (1000 * 60));
+        return mins < 1 ? '刚刚' : `${mins}分钟前`;
+      }
+      return `${hours}小时前`;
+    } else if (days === 1) {
+      return '昨天';
+    } else if (days < 7) {
+      return `${days}天前`;
+    } else {
+      return date.toLocaleDateString('zh-CN', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  };
+
+  const totalNotes = notes.length;
+  const todayNotes = notes.filter(n => {
+    const noteDate = new Date(n.createdAt);
+    const today = new Date();
+    return noteDate.toDateString() === today.toDateString();
+  }).length;
+
+  const renderNoteItem = ({ item }) => {
+    return (
+      <View style={styles.noteCard}>
+        <Text style={styles.noteContent}>{item.content}</Text>
+        <View style={styles.noteFooter}>
+          <Text style={styles.noteDate}>{formatDate(item.createdAt)}</Text>
+          <TouchableOpacity
+            style={styles.noteDeleteButton}
+            onPress={() => deleteNote(item.id)}
+          >
+            <Text style={styles.noteDeleteText}>删除</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={feishuWhite} />
+      
+      {/* 统计卡片 */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statBox}>
+          <Text style={styles.statNumber}>{totalNotes}</Text>
+          <Text style={styles.statLabel}>总笔记</Text>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statNumber}>{todayNotes}</Text>
+          <Text style={styles.statLabel}>今日记录</Text>
+        </View>
+      </View>
+
+      {/* 添加笔记 */}
+      <View style={styles.addContainer}>
+        <TextInput
+          style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
+          placeholder="记录今天的想法、日记或待办..."
+          placeholderTextColor={feishuTextLight}
+          value={newNote}
+          onChangeText={setNewNote}
+          multiline
+        />
+        <TouchableOpacity style={styles.addButton} onPress={addNote}>
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 笔记列表 */}
+      <FlatList
+        data={notes}
+        keyExtractor={(item) => item.id}
+        renderItem={renderNoteItem}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={loadNotes}
+            colors={[feishuBlue]}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>📝 还没有笔记</Text>
+            <Text style={styles.emptySubtext}>点击上方输入框记录你的想法</Text>
+          </View>
+        }
+      />
+    </SafeAreaView>
+  );
+}
+
 // 主应用
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Home"
+      <Tab.Navigator
+        initialRouteName="Habits"
         screenOptions={{
           headerStyle: {
             backgroundColor: '#FFFFFF',
@@ -484,33 +666,64 @@ export default function App() {
             color: '#1D2129',
           },
           headerTitleAlign: 'center',
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',
+            borderTopWidth: 1,
+            borderTopColor: '#E5E6EB',
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            paddingBottom: 8,
+            paddingTop: 8,
+            height: 60,
+          },
+          tabBarActiveTintColor: '#3370FF',
+          tabBarInactiveTintColor: '#86909C',
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
+          },
         }}
       >
-        <Stack.Screen
-          name="Home"
+        <Tab.Screen
+          name="Habits"
           component={HomeScreen}
           options={{ 
-            title: '⚡ 习惯追踪器',
-            headerLeft: () => (
-              <View style={{ marginLeft: 15 }}>
-                <Text style={{ fontSize: 28 }}>🎯</Text>
-              </View>
+            title: '习惯',
+            tabBarLabel: '习惯',
+            tabBarIcon: ({ color, size }) => (
+              <Text style={{ fontSize: 24 }}>🎯</Text>
             ),
+            headerTitle: '⚡ 习惯追踪器',
           }}
         />
-        <Stack.Screen
+        <Tab.Screen
           name="Stats"
           component={StatsScreen}
           options={{ 
-            title: '📊 统计报表',
-            headerLeft: () => (
-              <View style={{ marginLeft: 15 }}>
-                <Text style={{ fontSize: 28 }}>📈</Text>
-              </View>
+            title: '统计',
+            tabBarLabel: '统计',
+            tabBarIcon: ({ color, size }) => (
+              <Text style={{ fontSize: 24 }}>📊</Text>
             ),
+            headerTitle: '📊 统计报表',
           }}
         />
-      </Stack.Navigator>
+        <Tab.Screen
+          name="Notes"
+          component={NotesScreen}
+          options={{ 
+            title: '记事本',
+            tabBarLabel: '记事本',
+            tabBarIcon: ({ color, size }) => (
+              <Text style={{ fontSize: 24 }}>📝</Text>
+            ),
+            headerTitle: '📝 记事本',
+          }}
+        />
+      </Tab.Navigator>
     </NavigationContainer>
   );
 }
@@ -867,5 +1080,48 @@ const styles = StyleSheet.create({
   detailStats: {
     fontSize: 14,
     color: '#86909C',
+  },
+  // 记事本样式
+  noteCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  noteContent: {
+    fontSize: 16,
+    color: '#1D2129',
+    lineHeight: 24,
+    marginBottom: 10,
+  },
+  noteFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F5F6F7',
+    paddingTop: 10,
+  },
+  noteDate: {
+    fontSize: 12,
+    color: '#86909C',
+  },
+  noteDeleteButton: {
+    backgroundColor: '#F53F3F',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  noteDeleteText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
