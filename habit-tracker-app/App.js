@@ -173,6 +173,7 @@ function HomeScreen({ navigation }) {
     if (existing) {
       // 已存在，直接打卡
       checkIn(existing.id);
+      updateHabitHistory(habitName); // 更新历史频率
       return;
     }
     // 新建习惯并打卡
