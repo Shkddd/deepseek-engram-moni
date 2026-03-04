@@ -69,8 +69,12 @@ function ChatScreen() {
     };
     
     dataChannel.current.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      setMessages((prev) => [...prev, message]);
+      try {
+        const message = JSON.parse(event.data);
+        setMessages((prev) => [...prev, message]);
+      } catch (err) {
+        console.error('解析消息失败:', err);
+      }
     };
     
     dataChannel.current.onerror = (error) => {
@@ -81,8 +85,12 @@ function ChatScreen() {
     peerConnection.current.ondatachannel = (event) => {
       const receiveChannel = event.channel;
       receiveChannel.onmessage = (e) => {
-        const message = JSON.parse(e.data);
-        setMessages((prev) => [...prev, message]);
+        try {
+          const message = JSON.parse(e.data);
+          setMessages((prev) => [...prev, message]);
+        } catch (err) {
+          console.error('解析消息失败:', err);
+        }
       };
     };
 
@@ -104,6 +112,7 @@ function ChatScreen() {
       }
     } catch (error) {
       console.error('加载消息失败:', error);
+      setMessages([]); // 设置为空数组避免崩溃
     }
   };
 
@@ -137,7 +146,13 @@ function ChatScreen() {
         return;
       }
       setConnectionStatus('接受连接中...');
-      const offer = JSON.parse(remoteOffer);
+      let offer;
+      try {
+        offer = JSON.parse(remoteOffer);
+      } catch (e) {
+        Alert.alert('错误', '连接信息格式无效');
+        return;
+      }
       await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
       
       const answer = await peerConnection.current.createAnswer();
@@ -158,7 +173,13 @@ function ChatScreen() {
         Alert.alert('提示', '请先粘贴对方的连接信息');
         return;
       }
-      const data = JSON.parse(remoteOffer);
+      let data;
+      try {
+        data = JSON.parse(remoteOffer);
+      } catch (e) {
+        Alert.alert('错误', '连接信息格式无效');
+        return;
+      }
       if (data.iceCandidate) {
         await peerConnection.current.addIceCandidate(new RTCIceCandidate(data.iceCandidate));
       }
