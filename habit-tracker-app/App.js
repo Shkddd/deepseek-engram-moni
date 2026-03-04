@@ -873,6 +873,45 @@ function NotesScreen() {
   );
 }
 
+// 首页仪表盘 - 方块模块布局
+function DashboardScreen({ navigation }) {
+  const { theme } = useContext(ThemeContext);
+
+  const modules = [
+    { name: '打卡', icon: '📋', screen: 'Habits', color: '#3370FF' },
+    { name: '统计', icon: '📊', screen: 'Stats', color: '#00B365' },
+    { name: '记事', icon: '📝', screen: 'Notes', color: '#FF7D00' },
+    { name: '日程', icon: '📅', screen: 'Schedule', color: '#F53F3F' },
+  ];
+
+  const renderModule = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.moduleCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+      onPress={() => navigation.navigate(item.screen)}
+    >
+      <Text style={styles.moduleIcon}>{item.icon}</Text>
+      <Text style={[styles.moduleName, { color: theme.colors.text }]}>{item.name}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.dark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.primary} />
+      <View style={[styles.dashboardHeader, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.dashboardTitle, { color: theme.colors.text }]}>⚡ 习惯追踪器</Text>
+      </View>
+      <FlatList
+        data={modules}
+        renderItem={renderModule}
+        keyExtractor={(item) => item.name}
+        numColumns={2}
+        contentContainerStyle={styles.moduleGrid}
+        columnWrapperStyle={styles.moduleRow}
+      />
+    </SafeAreaView>
+  );
+}
+
 // 设置屏幕
 function SettingsScreen() {
   const [username, setUsername] = useState('');
@@ -1237,7 +1276,7 @@ export default function App() {
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode, theme }}>
       <NavigationContainer>
         <Tab.Navigator
-          initialRouteName="Habits"
+          initialRouteName="Home"
           screenOptions={{
             headerStyle: {
               backgroundColor: theme.colors.card,
@@ -1276,39 +1315,15 @@ export default function App() {
           }}
         >
         <Tab.Screen
-          name="Habits"
-          component={HomeScreen}
+          name="Home"
+          component={DashboardScreen}
           options={{ 
-            title: '习惯',
-            tabBarLabel: '习惯',
+            title: '首页',
+            tabBarLabel: '首页',
             tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: 24 }}>🎯</Text>
+              <Text style={{ fontSize: 24 }}>🏠</Text>
             ),
-            headerTitle: '⚡ 习惯追踪器',
-          }}
-        />
-        <Tab.Screen
-          name="Stats"
-          component={StatsScreen}
-          options={{ 
-            title: '统计',
-            tabBarLabel: '统计',
-            tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: 24 }}>📊</Text>
-            ),
-            headerTitle: '📊 统计报表',
-          }}
-        />
-        <Tab.Screen
-          name="Notes"
-          component={NotesScreen}
-          options={{ 
-            title: '记事本',
-            tabBarLabel: '记事本',
-            tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: 24 }}>📝</Text>
-            ),
-            headerTitle: '📝 记事本',
+            headerShown: false,
           }}
         />
         <Tab.Screen
@@ -1335,6 +1350,22 @@ export default function App() {
             headerTitle: '💬 P2P 聊天',
           }}
         />
+        {/* 子页面（不显示在 Tab 中） */}
+        <Tab.Screen
+          name="Habits"
+          component={HomeScreen}
+          options={{ headerShown: false }}
+        />
+        <Tab.Screen
+          name="Stats"
+          component={StatsScreen}
+          options={{ headerShown: false }}
+        />
+        <Tab.Screen
+          name="Notes"
+          component={NotesScreen}
+          options={{ headerShown: false }}
+        />
       </Tab.Navigator>
     </NavigationContainer>
   </ThemeContext.Provider>
@@ -1342,6 +1373,48 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  // 首页仪表盘样式
+  dashboardHeader: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E6EB',
+  },
+  dashboardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  moduleGrid: {
+    padding: 15,
+  },
+  moduleRow: {
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  moduleCard: {
+    width: '48%',
+    aspectRatio: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E6EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  moduleIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  moduleName: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F6F7',
