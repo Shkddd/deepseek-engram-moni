@@ -55,6 +55,10 @@ function ChatScreen() {
   const [inputMessage, setInputMessage] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('未连接');
   const [myPeerId, setMyPeerId] = useState('');
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [showGroupChat, setShowGroupChat] = useState(false);
+  const [groupMessages, setGroupMessages] = useState([]);
+  const [groupMessage, setGroupMessage] = useState('');
   
   const peerConnection = useRef(null);
   const dataChannel = useRef(null);
@@ -62,12 +66,36 @@ function ChatScreen() {
   useEffect(() => {
     initPeerConnection();
     loadMessages();
+    loadGroupMessages();
     return () => {
       if (peerConnection.current) {
         peerConnection.current.close();
       }
     };
   }, []);
+
+  // 加载群消息
+  const loadGroupMessages = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('group_messages');
+      if (stored) setGroupMessages(JSON.parse(stored));
+    } catch (e) { console.error('加载群消息失败', e); }
+  };
+
+  // 保存群消息
+  const saveGroupMessages = async (msgs) => {
+    try { await AsyncStorage.setItem('group_messages', JSON.stringify(msgs)); } catch (e) {}
+  };
+
+  // 发送群消息
+  const sendGroupMessage = () => {
+    if (!groupMessage.trim()) return;
+    const msg = { id: Date.now().toString(), text: groupMessage.trim(), sender: '我', time: new Date().toISOString() };
+    const newMsgs = [...groupMessages, msg];
+    setGroupMessages(newMsgs);
+    saveGroupMessages(newMsgs);
+    setGroupMessage('');
+  };
 
   const initPeerConnection = () => {
     peerConnection.current = new RTCPeerConnection(STUN_SERVERS);
@@ -369,11 +397,45 @@ function ChatScreen() {
         />
         <TouchableOpacity 
           style={[styles.sendButton, { backgroundColor: theme.colors.primary }]} 
-          onPress={sendMessage}
+          onPress={() => setShowPlusMenu(!showPlusMenu)}
         >
-          <Text style={styles.sendButtonText}>发送</Text>
+          <Text style={styles.sendButtonText}>+</Text>
         </TouchableOpacity>
       </View>
+      
+      {/* 微信式加号浮窗 */}
+      {showPlusMenu && (
+        <View style={[styles.plusMenu, { backgroundColor: theme.colors.card }]}>
+          <TouchableOpacity style={styles.plusMenuItem} onPress={() => { setShowGroupChat(true); setShowPlusMenu(false); }}>
+            <Text style={styles.plusMenuIcon}>👥</Text>
+            <Text style={[styles.plusMenuText, { color: theme.colors.text }]}>群聊</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {/* 群聊界面 */}
+      {showGroupChat && (
+        <View style={[styles.groupOverlay, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.groupHeader, { backgroundColor: theme.colors.card }]}>
+            <TouchableOpacity onPress={() => setShowGroupChat(false)}><Text style={{color: theme.colors.primary}}>← 返回</Text></TouchableOpacity>
+            <Text style={{color: theme.colors.text, fontWeight: 'bold'}}>群聊</Text>
+            <View style={{width:50}}/>
+          </View>
+          <FlatList data={groupMessages} keyExtractor={i => i.id} renderItem={({item}) => (
+            <View style={[styles.groupMsg, item.sender==='我'&&styles.groupMsgMy]}>
+              <Text style={{color:theme.colors.textLight, fontSize:12}}>{item.sender}</Text>
+              <Text style={{color: theme.colors.text}}>{item.text}</Text>
+            </View>
+          )} />
+          <View style={[styles.groupInput, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+            <TextInput style={{flex:1, borderWidth:1, borderRadius:20, paddingHorizontal:15, marginRight:10, color: theme.colors.text}} 
+              placeholder="输入群消息..." placeholderTextColor={theme.colors.textLight} value={groupMessage} onChangeText={setGroupMessage} />
+            <TouchableOpacity style={[styles.sendButton, { backgroundColor: theme.colors.primary }]} onPress={sendGroupMessage}>
+              <Text style={styles.sendButtonText}>发送</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
