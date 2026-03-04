@@ -84,11 +84,47 @@ function HomeScreen({ navigation }) {
   const [newHabit, setNewHabit] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [habitHistory, setHabitHistory] = useState([]); // 历史习惯频率
   const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
     loadHabits();
+    loadHabitHistory();
   }, []);
+
+  // 加载历史习惯频率
+  const loadHabitHistory = async () => {
+    try {
+      const history = await AsyncStorage.getItem('habitHistory');
+      if (history) {
+        setHabitHistory(JSON.parse(history));
+      }
+    } catch (error) {
+      console.error('加载历史习惯失败:', error);
+    }
+  };
+
+  // 保存习惯并更新历史频率
+  const updateHabitHistory = async (habitName) => {
+    try {
+      let history = habitHistory;
+      const existing = history.find(h => h.name === habitName);
+      if (existing) {
+        existing.count += 1;
+        existing.lastUsed = new Date().toISOString();
+      } else {
+        history.push({ name: habitName, count: 1, lastUsed: new Date().toISOString() });
+      }
+      // 按频率排序
+      history.sort((a, b) => b.count - a.count);
+      // 保留前20个
+      history = history.slice(0, 20);
+      await AsyncStorage.setItem('habitHistory', JSON.stringify(history));
+      setHabitHistory(history);
+    } catch (error) {
+      console.error('保存历史习惯失败:', error);
+    }
+  };
 
   const loadHabits = async () => {
     try {
@@ -125,7 +161,31 @@ function HomeScreen({ navigation }) {
       createdAt: new Date().toISOString(),
     };
     saveHabits([habit, ...habits]);
+    updateHabitHistory(newHabit.trim()); // 更新历史频率
     setNewHabit('');
+  };
+
+  // 快速添加历史习惯并打卡
+  const quickAddHabit = (habitName) => {
+    // 检查是否已存在
+    const existing = habits.find(h => h.name === habitName);
+    if (existing) {
+      // 已存在，直接打卡
+      checkIn(existing.id);
+      return;
+    }
+    // 新建习惯并打卡
+    const habit = {
+      id: Date.now().toString(),
+      name: habitName,
+      streak: 1,
+      completedToday: true,
+      totalCheckins: 1,
+      createdAt: new Date().toISOString(),
+    };
+    saveHabits([habit, ...habits]);
+    updateHabitHistory(habitName);
+    Alert.alert('🎉', `添加"${habitName}"并打卡成功！`);
   };
 
   const checkIn = (id) => {
@@ -213,6 +273,25 @@ function HomeScreen({ navigation }) {
           <Text style={styles.statLabel}>累计天数</Text>
         </View>
       </View>
+
+      {/* 常用习惯快速打卡区域 */}
+      {habitHistory.length > 0 && (
+        <View style={[styles.historyContainer, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+          <Text style={[styles.historyTitle, { color: theme.colors.text }]}>⚡ 常用习惯 (点击即打卡)</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyScroll}>
+            {habitHistory.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[styles.historyChip, { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary }]}
+                onPress={() => quickAddHabit(item.name)}
+              >
+                <Text style={[styles.historyChipText, { color: theme.colors.primary }]}>{item.name}</Text>
+                <Text style={[styles.historyChipCount, { color: theme.colors.textLight }]}>{item.count}次</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <View style={[styles.addContainer, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
         <TextInput
@@ -1286,6 +1365,40 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     color: '#86909C',
+  },
+  // 常用习惯区域
+  historyContainer: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E6EB',
+  },
+  historyTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  historyScroll: {
+    flexDirection: 'row',
+    paddingRight: 15,
+  },
+  historyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  historyChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  historyChipCount: {
+    fontSize: 11,
+    marginLeft: 4,
   },
   addContainer: {
     flexDirection: 'row',
