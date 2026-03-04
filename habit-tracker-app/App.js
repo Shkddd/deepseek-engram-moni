@@ -26,6 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BarChart, PieChart, LineChart } from 'react-native-chart-kit';
 import * as ImagePicker from 'expo-image-picker';
 import ChatScreen from './ChatScreen';
+import ScheduleScreen from './ScheduleScreen';
 import {
   requestNotificationPermission,
   enableDailyReminder,
@@ -1364,6 +1365,11 @@ export default function App() {
         <Tab.Screen
           name="Notes"
           component={NotesScreen}
+        />
+        <Tab.Screen
+          name="Schedule"
+          component={ScheduleScreen}
+          options={{ headerShown: false }}
           options={{ headerShown: false }}
         />
       </Tab.Navigator>
