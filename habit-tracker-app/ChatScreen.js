@@ -303,8 +303,8 @@ function ChatScreen() {
       {/* 消息列表 */}
       <FlatList
         data={messages}
-        key => item.id}
-Extractor={(item)        renderItem={renderMessage}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMessage}
         style={styles.messageList}
         contentContainerStyle={styles.messageListContent}
         ListEmptyComponent={

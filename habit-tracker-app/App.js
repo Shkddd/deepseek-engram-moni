@@ -365,18 +365,18 @@ function StatsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3370FF" />
-          <Text style={styles.loadingText}>加载统计数据...</Text>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.text }]}>加载统计数据...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} backgroundColor={theme.colors.card} />
       <ScrollView style={styles.statsScroll} showsVerticalScrollIndicator={false}>
         <View style={styles.statsFull}>
           <Text style={styles.statsTitle}>📊 数据统计</Text>
@@ -443,7 +443,7 @@ function StatsScreen() {
 
           {habits.length > 0 && (
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>🏆 打卡次数排行</Text>
+              <Text style={[styles.chartTitle, { color: theme.colors.text }]}>🏆 打卡次数排行</Text>
               <BarChart
                 data={chartData}
                 width={Dimensions.get('window').width - 60}
@@ -452,19 +452,19 @@ function StatsScreen() {
                 yAxisSuffix="次"
                 yAxisInterval={yAxisInterval}
                 chartConfig={{
-                  backgroundColor: '#FFFFFF',
-                  backgroundGradientFrom: '#FFFFFF',
-                  backgroundGradientTo: '#FFFFFF',
+                  backgroundColor: theme.colors.card,
+                  backgroundGradientFrom: theme.colors.card,
+                  backgroundGradientTo: theme.colors.card,
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(51, 112, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(29, 33, 41, ${opacity})`,
+                  color: (opacity = 1) => theme.dark ? `rgba(74, 138, 255, ${opacity})` : `rgba(51, 112, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => theme.dark ? `rgba(232, 232, 232, ${opacity})` : `rgba(29, 33, 41, ${opacity})`,
                   style: {
                     borderRadius: 16,
                   },
                   propsForDots: {
                     r: '6',
                     strokeWidth: '2',
-                    stroke: '#3370FF',
+                    stroke: theme.colors.primary,
                   },
                 }}
                 style={{
@@ -479,13 +479,13 @@ function StatsScreen() {
 
           {habits.length > 0 && (
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>📊 习惯完成分布</Text>
+              <Text style={[styles.chartTitle, { color: theme.colors.text }]}>📊 习惯完成分布</Text>
               <PieChart
                 data={pieData}
                 width={Dimensions.get('window').width - 60}
                 height={220}
                 chartConfig={{
-                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  color: (opacity = 1) => theme.dark ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`,
                 }}
                 accessor="population"
                 backgroundColor="transparent"
@@ -497,7 +497,7 @@ function StatsScreen() {
 
           {habits.length > 0 && (
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>📉 连胜增长趋势</Text>
+              <Text style={[styles.chartTitle, { color: theme.colors.text }]}>📉 连胜增长趋势</Text>
               <LineChart
                 data={lineData}
                 width={Dimensions.get('window').width - 60}
@@ -506,19 +506,19 @@ function StatsScreen() {
                 yAxisSuffix="次"
                 yAxisInterval={lineYAxisInterval}
                 chartConfig={{
-                  backgroundColor: '#FFFFFF',
-                  backgroundGradientFrom: '#FFFFFF',
-                  backgroundGradientTo: '#FFFFFF',
+                  backgroundColor: theme.colors.card,
+                  backgroundGradientFrom: theme.colors.card,
+                  backgroundGradientTo: theme.colors.card,
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(51, 112, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(29, 33, 41, ${opacity})`,
+                  color: (opacity = 1) => theme.dark ? `rgba(74, 138, 255, ${opacity})` : `rgba(51, 112, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => theme.dark ? `rgba(232, 232, 232, ${opacity})` : `rgba(29, 33, 41, ${opacity})`,
                   style: {
                     borderRadius: 16,
                   },
                   propsForDots: {
                     r: '6',
                     strokeWidth: '2',
-                    stroke: '#3370FF',
+                    stroke: theme.colors.primary,
                   },
                 }}
                 bezier
@@ -564,14 +564,7 @@ function NotesScreen() {
   const [loading, setLoading] = useState(false);
   const [noteImages, setNoteImages] = useState([]);
   const [showImagePicker, setShowImagePicker] = useState(false);
-
-  const feishuBlue = '#3370FF';
-  const feishuWhite = '#FFFFFF';
-  const feishuGray = '#F5F6F7';
-  const feishuText = '#1D2129';
-  const feishuTextLight = '#86909C';
-  const feishuGreen = '#00B365';
-  const feishuRed = '#F53F3F';
+  const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
     loadNotes();
@@ -696,9 +689,9 @@ function NotesScreen() {
 
   const renderNoteItem = ({ item }) => {
     return (
-      <View style={styles.noteCard}>
+      <View style={[styles.noteCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         {item.content ? (
-          <Text style={styles.noteContent}>{item.content}</Text>
+          <Text style={[styles.noteContent, { color: theme.colors.text }]}>{item.content}</Text>
         ) : null}
         {item.images && item.images.length > 0 && (
           <View style={styles.noteImagesContainer}>
@@ -713,12 +706,12 @@ function NotesScreen() {
           </View>
         )}
         <View style={styles.noteFooter}>
-          <Text style={styles.noteDate}>{formatDate(item.createdAt)}</Text>
+          <Text style={[styles.noteDate, { color: theme.colors.textLight }]}>{formatDate(item.createdAt)}</Text>
           <TouchableOpacity
-            style={styles.noteDeleteButton}
+            style={[styles.noteDeleteButton, { borderColor: theme.colors.danger }]}
             onPress={() => deleteNote(item.id)}
           >
-            <Text style={styles.noteDeleteText}>删除</Text>
+            <Text style={[styles.noteDeleteText, { color: theme.colors.danger }]}>删除</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -726,26 +719,26 @@ function NotesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={feishuWhite} />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} backgroundColor={theme.colors.card} />
       
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { backgroundColor: theme.colors.card }]}>
         <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{totalNotes}</Text>
-          <Text style={styles.statLabel}>总笔记</Text>
+          <Text style={[styles.statNumber, { color: theme.colors.primary }]}>{totalNotes}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textLight }]}>总笔记</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{todayNotes}</Text>
-          <Text style={styles.statLabel}>今日记录</Text>
+          <Text style={[styles.statNumber, { color: theme.colors.primary }]}>{todayNotes}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textLight }]}>今日记录</Text>
         </View>
       </View>
 
-      <View style={styles.addContainer}>
+      <View style={[styles.addContainer, { backgroundColor: theme.colors.card }]}>
         <View style={styles.noteInputWrapper}>
           <TextInput
-            style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
+            style={[styles.input, { minHeight: 80, textAlignVertical: 'top', backgroundColor: theme.colors.inputBg, color: theme.colors.text, borderColor: theme.colors.border }]}
             placeholder="记录今天的想法、日记或待办..."
-            placeholderTextColor={feishuTextLight}
+            placeholderTextColor={theme.colors.textLight}
             value={newNote}
             onChangeText={setNewNote}
             multiline
@@ -766,12 +759,12 @@ function NotesScreen() {
             </View>
           )}
           <View style={styles.imagePickerButton}>
-            <TouchableOpacity onPress={pickImage} style={styles.pickImageButton}>
-              <Text style={styles.pickImageText}>📷 添加图片</Text>
+            <TouchableOpacity onPress={pickImage} style={[styles.pickImageButton, { borderColor: theme.colors.border }]}>
+              <Text style={[styles.pickImageText, { color: theme.colors.primary }]}>📷 添加图片</Text>
             </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={addNote}>
+        <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.primary }]} onPress={addNote}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -780,19 +773,20 @@ function NotesScreen() {
         data={notes}
         keyExtractor={(item) => item.id}
         renderItem={renderNoteItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { backgroundColor: theme.colors.background }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={loading}
             onRefresh={loadNotes}
-            colors={[feishuBlue]}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>📝 还没有笔记</Text>
-            <Text style={styles.emptySubtext}>点击上方输入框记录你的想法</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textLight }]}>📝 还没有笔记</Text>
+            <Text style={[styles.emptySubtext, { color: theme.colors.textLight }]}>点击上方输入框记录你的想法</Text>
           </View>
         }
       />
