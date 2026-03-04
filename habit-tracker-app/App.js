@@ -40,7 +40,7 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // 主题 Context
-const ThemeContext = createContext();
+export const ThemeContext = createContext();
 
 // 主题配置
 const lightTheme = {
