@@ -13,14 +13,26 @@ screenshot.png
 # OpenClaw 系统
 .openclaw/
 agents/
+HEARTBEAT.md
+IDENTITY.md
+MEMORY.md
+TOOLS.md
+USER.md
+WORKFLOW_AUTO.md
+BOOTSTRAP.md
+scripts/
+memory/
 
 # 临时文件
 *.tar.gz
 *.log
 token-state.json
 
-# 记忆文件
-memory/
+# App builds
+habit-tracker-app/builds/
+habit-tracker-app-complete.tar.gz
+habit_tracker/
 
-# Bootstrap
-BOOTSTRAP.md
+# Skills
+XiaohongshuSkills/
+xiaohongshu-skill/

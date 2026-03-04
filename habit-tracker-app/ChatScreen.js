@@ -32,7 +32,23 @@ const STUN_SERVERS = {
 
 // P2P 聊天屏幕
 function ChatScreen() {
-  const { theme } = useContext(ThemeContext);
+  const context = useContext(ThemeContext);
+  // 防止 Context 未初始化
+  const theme = context?.theme || {
+    dark: false,
+    colors: {
+      background: '#F5F6F7',
+      card: '#FFFFFF',
+      text: '#1D2129',
+      textLight: '#86909C',
+      border: '#E5E6EB',
+      primary: '#3370FF',
+      success: '#00B365',
+      danger: '#F53F3F',
+      gray: '#F5F6F7',
+      inputBg: '#f9f9f9',
+    }
+  };
   const [localOffer, setLocalOffer] = useState('');
   const [remoteOffer, setRemoteOffer] = useState('');
   const [messages, setMessages] = useState([]);
