@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Vibration, Dimensions } from 'react-native';
 import { COLORS, ItemType } from '../constants';
+import { playBackgroundMusic, stopBackgroundMusic, playTapSound, playCorrectSound, playWrongSound, playLevelUpSound, playGameOverSound } from '../utils/sound';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CELL_SIZE = 70;
@@ -112,6 +113,7 @@ const MemoryGameScreen: React.FC = () => {
       }, 1000);
     } else if (timeLeft === 0 && gameState === 'playing') {
       // 时间到，游戏结束
+      playGameOverSound();
       setGameOverReason('time');
       setGameState('result');
     }
@@ -128,10 +130,10 @@ const MemoryGameScreen: React.FC = () => {
     setCorrectCount(0);
     setTotalProgress([]);
     if (mode === 'survival') {
-      // 生存模式：10秒开始，每关减少1秒，最少2秒
       const timeLimit = Math.max(10 - currentLevel, 2);
       setTimeLeft(timeLimit);
     }
+    playBackgroundMusic(mode);
     startLevel(0, mode);
   };
 
@@ -216,10 +218,12 @@ const MemoryGameScreen: React.FC = () => {
     if (isTargetCell) {
       setScore(newScore);
       setCorrectCount(newCorrectCount);
+      playCorrectSound();
       Vibration.vibrate(50);
     } else {
       setScore(newScore);
       setLives(newLives);
+      playWrongSound();
       Vibration.vibrate(200);
     }
 
@@ -229,6 +233,7 @@ const MemoryGameScreen: React.FC = () => {
       if (newCorrectCount >= targetCount) {
         setGameOverReason('complete');
         setTotalProgress(prev => [...prev, newScore]);
+        playLevelUpSound();
         setGameState('levelComplete');
         
         const nextLevel = currentLevel + 1;
@@ -245,6 +250,7 @@ const MemoryGameScreen: React.FC = () => {
         }, 1500);
       } else if (newLives <= 0) {
         // 生命值耗尽，游戏结束
+        playGameOverSound();
         setGameOverReason('lives');
         setGameState('result');
       }
@@ -252,6 +258,7 @@ const MemoryGameScreen: React.FC = () => {
   };
 
   const exitGame = () => {
+    stopBackgroundMusic();
     setGameState('menu');
   };
 
