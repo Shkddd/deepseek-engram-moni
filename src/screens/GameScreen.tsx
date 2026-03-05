@@ -169,8 +169,10 @@ const MemoryGameScreen: React.FC = () => {
     setCorrectCount(0);
     setTotalProgress([]);
     if (mode === 'survival') {
-      const timeLimit = Math.max(10 - currentLevel, 2);
-      setTimeLeft(timeLimit);
+      // 生存模式：4秒开始，每关减少0.2秒，最少2秒
+      setTimeLeft(4);
+    } else if (mode === 'classic' || mode === 'endless') {
+      setTimeLeft(6);
     }
     playBackgroundMusic(mode);
     startLevel(0, mode);
@@ -181,7 +183,7 @@ const MemoryGameScreen: React.FC = () => {
   };
 
   const startLevel = (level: number, mode: GameMode = gameMode) => {
-    if (level >= 100 && mode !== 'endless') {
+    if (level >= 100 && mode === 'classic') {
       setGameState('result');
       return;
     }
@@ -282,8 +284,9 @@ const MemoryGameScreen: React.FC = () => {
           setLives(gameMode === 'survival' ? 5 : 3);
           setGameOverReason(null);
           if (gameMode === 'survival') {
-            const timeLimit = Math.max(10 - nextLevel, 2);
-            setTimeLeft(timeLimit);
+            // 生存模式：4秒开始，每关减少0.2秒，最少2秒
+            const timeLimit = Math.max(4 - nextLevel * 0.2, 2);
+            setTimeLeft(Math.floor(timeLimit));
           } else if (gameMode === 'classic' || gameMode === 'endless') {
             setTimeLeft(6);
           }

@@ -15,7 +15,7 @@ const classicMelody = [
 // 无尽模式 - 紧张快速
 const endlessMelody = [
   { freq: 440, dur: 0.2 }, { freq: 523, dur: 0.2 }, { freq: 659, dur: 0.2 },
-  { freq: 523, dur: }, { freq: 0.2 440, dur: 0.2 }, { freq: 0, dur: 0.15 },
+  { freq: 523, dur: 0.2 }, { freq: 440, dur: 0.2 }, { freq: 0, dur: 0.15 },
   { freq: 494, dur: 0.2 }, { freq: 587, dur: 0.2 }, { freq: 698, dur: 0.2 },
   { freq: 587, dur: 0.2 }, { freq: 494, dur: 0.2 }, { freq: 0, dur: 0.15 },
 ];
