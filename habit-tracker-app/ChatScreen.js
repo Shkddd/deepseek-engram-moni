@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { ThemeContext } from './App';
 import {
   StyleSheet,
   Text,
