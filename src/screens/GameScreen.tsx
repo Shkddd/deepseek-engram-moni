@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Vibration, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Vibration, Dimensions, Animated, Easing } from 'react-native';
 import { COLORS, ItemType } from '../constants';
-import { playBackgroundMusic, stopBackgroundMusic, playTapSound, playCorrectSound, playWrongSound, playLevelUpSound, playGameOverSound } from '../utils/sound';
+import { playBackgroundMusic, stopBackgroundMusic, playCorrectSound, playWrongSound, playLevelUpSound, playGameOverSound } from '../utils/sound';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_CELL_SIZE = 70;
@@ -13,7 +13,6 @@ interface GridCell {
   emoji: string;
   isTarget: boolean;
   isRevealed: boolean;
-  isMoving?: boolean;
 }
 
 type GameMode = 'classic' | 'endless' | 'survival';
@@ -56,10 +55,8 @@ const GRID_CONFIGS: Record<number, { cellSize: number; gap: number }> = {
   5: { cellSize: Math.min((SCREEN_WIDTH - 120) / 5, MAX_CELL_SIZE), gap: 3 },
 };
 
-// 获取难度配置
 const getLevelConfig = (level: number, mode: GameMode) => {
   if (mode === 'endless') {
-    // 无尽模式：随机难度
     const gridSizes = [3, 3, 3, 4, 4, 4, 5, 5];
     const gridSize = gridSizes[Math.min(level, gridSizes.length - 1)];
     const targetCount = Math.min(3 + Math.floor(level / 5), 8);
@@ -67,7 +64,6 @@ const getLevelConfig = (level: number, mode: GameMode) => {
     return { gridSize, targetCount, showTime };
   }
   
-  // 经典/生存模式 - 记忆时间3秒
   const configs = [
     { gridSize: 3, targetCount: 3, showTime: 3000 },
     { gridSize: 3, targetCount: 3, showTime: 3000 },
@@ -80,6 +76,39 @@ const getLevelConfig = (level: number, mode: GameMode) => {
     { gridSize: 5, targetCount: 6, showTime: 4000 },
   ];
   return configs[Math.min(level, configs.length - 1)];
+};
+
+const AnimatedCell: React.FC<{ children: React.ReactNode; animate: boolean; style?: any }> = ({ children, animate, style }) => {
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (animate) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.15,
+            duration: 450,
+            easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 450,
+            easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [animate]);
+
+  return (
+    <Animated.View style={[style, { transform: [{ scale: pulseAnim }] }]}>
+      {children}
+    </Animated.View>
+  );
 };
 
 const MemoryGameScreen: React.FC = () => {
@@ -105,14 +134,12 @@ const MemoryGameScreen: React.FC = () => {
   const gridConfig = GRID_CONFIGS[levelConfig.gridSize] || GRID_CONFIGS[3];
   const gridWidth = gridConfig.cellSize * levelConfig.gridSize + gridConfig.gap * (levelConfig.gridSize - 1);
 
-  // 计时器 - 所有模式
   useEffect(() => {
     if (gameState === 'playing' && (gameMode === 'survival' || gameMode === 'classic' || gameMode === 'endless') && timeLeft > 0) {
       timerRef.current = setTimeout(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
     } else if (timeLeft === 0 && gameState === 'playing') {
-      // 时间到，游戏结束
       playGameOverSound();
       setGameOverReason('time');
       setGameState('result');
@@ -142,6 +169,11 @@ const MemoryGameScreen: React.FC = () => {
   };
 
   const startLevel = (level: number, mode: GameMode = gameMode) => {
+    if (level >= 100 && mode !== 'endless') {
+      setGameState('result');
+      return;
+    }
+
     const config = getLevelConfig(level, mode);
     const totalCells = config.gridSize * config.gridSize;
     const emojis = theme.emoji;
@@ -150,7 +182,6 @@ const MemoryGameScreen: React.FC = () => {
     setTargetEmoji(target);
     setTargetCount(config.targetCount);
 
-    // 随机选择目标格子
     let targetIndices = new Set<number>();
     while (targetIndices.size < config.targetCount) {
       targetIndices.add(Math.floor(Math.random() * totalCells));
@@ -171,7 +202,6 @@ const MemoryGameScreen: React.FC = () => {
       });
     }
 
-    // 无尽模式：目标移动一次
     if (mode === 'endless' && level > 0) {
       const targets = newGrid.filter(c => c.isTarget);
       const nonTargets = newGrid.filter(c => !c.isTarget);
@@ -190,7 +220,6 @@ const MemoryGameScreen: React.FC = () => {
     setGrid(newGrid);
     setGameState('memorize');
 
-    // 经典/无尽模式：6秒倒计时
     if (gameMode === 'classic' || gameMode === 'endless') {
       setTimeLeft(6);
     }
@@ -227,9 +256,7 @@ const MemoryGameScreen: React.FC = () => {
       Vibration.vibrate(200);
     }
 
-    // 延迟检查结果
     setTimeout(() => {
-      // 找到所有目标则过关
       if (newCorrectCount >= targetCount) {
         setGameOverReason('complete');
         setTotalProgress(prev => [...prev, newScore]);
@@ -249,7 +276,6 @@ const MemoryGameScreen: React.FC = () => {
           startLevel(nextLevel);
         }, 1500);
       } else if (newLives <= 0) {
-        // 生命值耗尽，游戏结束
         playGameOverSound();
         setGameOverReason('lives');
         setGameState('result');
@@ -262,7 +288,8 @@ const MemoryGameScreen: React.FC = () => {
     setGameState('menu');
   };
 
-  // 菜单界面
+  const endless = gameMode === 'endless';
+
   const renderMenu = () => (
     <View style={[styles.menuContainer, { backgroundColor: theme.bg }]}>
       <Text style={styles.title}>🎮 记忆翻翻看</Text>
@@ -290,7 +317,7 @@ const MemoryGameScreen: React.FC = () => {
         <TouchableOpacity style={[styles.modeBtn, { backgroundColor: '#6C5CE7' }]} onPress={() => startGame('classic')}>
           <Text style={styles.modeEmoji}>🏆</Text>
           <Text style={styles.modeTitle}>经典模式</Text>
-          <Text style={styles.modeDesc}>100关，难度递增</Text>
+          <Text style={styles.modeDesc}>100关，6秒时限</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.modeBtn, { backgroundColor: '#00B894' }]} onPress={() => startGame('endless')}>
@@ -302,7 +329,7 @@ const MemoryGameScreen: React.FC = () => {
         <TouchableOpacity style={[styles.modeBtn, { backgroundColor: '#E17055' }]} onPress={() => startGame('survival')}>
           <Text style={styles.modeEmoji}>⏱️</Text>
           <Text style={styles.modeTitle}>生存模式</Text>
-          <Text style={styles.modeDesc}>60秒时限，挑战极限</Text>
+          <Text style={styles.modeDesc}>时间递减，挑战极限</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -316,7 +343,7 @@ const MemoryGameScreen: React.FC = () => {
       
       <View style={styles.header}>
         <Text style={styles.levelText}>
-          {gameMode === 'endless' ? `第 ${currentLevel + 1} 关` : `第 ${currentLevel + 1} / 100 关`}
+          {endless ? `第 ${currentLevel + 1} 关` : `第 ${currentLevel + 1} / 100 关`}
         </Text>
         <Text style={[styles.targetText, { color: theme.target }]}>❤️ 记住这些位置</Text>
       </View>
@@ -327,13 +354,14 @@ const MemoryGameScreen: React.FC = () => {
             {Array.from({ length: levelConfig.gridSize }).map((_, col) => {
               const cell = grid.find(c => c.row === row && c.col === col);
               return (
-                <View
+                <AnimatedCell
                   key={`${row}-${col}`}
+                  animate={cell?.isTarget || false}
                   style={[styles.cell, { width: gridConfig.cellSize, backgroundColor: cell?.isTarget ? theme.target : theme.card }]}
                 >
                   {cell && <Text style={[styles.cellEmoji, { fontSize: gridConfig.cellSize * 0.45 }]}>{cell.emoji}</Text>}
                   {cell?.isTarget && <Text style={styles.targetMark}>❤️</Text>}
-                </View>
+                </AnimatedCell>
               );
             })}
           </View>
@@ -354,13 +382,13 @@ const MemoryGameScreen: React.FC = () => {
 
       <View style={styles.header}>
         <Text style={styles.levelText}>
-          {gameMode === 'endless' ? `第 ${currentLevel + 1} 关` : `第 ${currentLevel + 1} / 100 关`}
+          {endless ? `第 ${currentLevel + 1} 关` : `第 ${currentLevel + 1} / 100 关`}
         </Text>
         <Text style={[styles.targetText, { color: theme.target }]}>找出: {targetEmoji}</Text>
       </View>
 
-      {gameMode === 'survival' && (
-        <View style={[styles.timerBox, { backgroundColor: timeLeft <= 10 ? COLORS.error : theme.card }]}>
+      {(gameMode === 'survival' || gameMode === 'classic' || gameMode === 'endless') && (
+        <View style={[styles.timerBox, { backgroundColor: timeLeft <= 3 ? COLORS.error : theme.card }]}>
           <Text style={styles.timerText}>⏱️ {timeLeft}s</Text>
         </View>
       )}
@@ -416,7 +444,7 @@ const MemoryGameScreen: React.FC = () => {
       <View style={[styles.resultCard, { backgroundColor: theme.card }]}>
         <Text style={styles.progressTitle}>总体进度</Text>
         <View style={styles.progressDots}>
-          {gameMode === 'endless' ? (
+          {endless ? (
             <Text style={styles.endlessText}>已通关 {totalProgress.length} 关</Text>
           ) : (
             Array.from({ length: 10 }).map((_, i) => (
@@ -428,8 +456,6 @@ const MemoryGameScreen: React.FC = () => {
       </View>
     </View>
   );
-
-  const endless = gameMode === 'endless';
 
   const renderResult = () => {
     const isWin = gameOverReason === 'complete';
@@ -452,7 +478,7 @@ const MemoryGameScreen: React.FC = () => {
         <View style={styles.resultRow}>
           <Text style={styles.resultLabel}>游戏模式</Text>
           <Text style={styles.resultValue}>
-            {gameMode === 'classic' ? '🏆 经典' : gameMode === 'endless' ? '♾️ 无尽' : '⏱️ 生存'}
+            {gameMode === 'classic' ? '🏆 经典' : endless ? '♾️ 无尽' : '⏱️ 生存'}
           </Text>
         </View>
       </View>
