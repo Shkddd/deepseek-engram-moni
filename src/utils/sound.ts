@@ -1,123 +1,130 @@
-// 音效模块 - 使用 Web Audio API 生成游戏音效
-import { Audio } from 'expo-av';
+// 背景音乐模块 - 使用 Web Audio API
+let audioContext: any = null;
+let isPlaying = false;
+let currentMode: string = '';
+let musicInterval: any = null;
 
-let backgroundMusic: Audio.Sound | null = null;
+// 经典模式 - 轻快明亮
+const classicMelody = [
+  { freq: 523, dur: 0.25 }, { freq: 659, dur: 0.25 }, { freq: 784, dur: 0.25 },
+  { freq: 659, dur: 0.25 }, { freq: 523, dur: 0.25 }, { freq: 0, dur: 0.25 },
+  { freq: 587, dur: 0.25 }, { freq: 698, dur: 0.25 }, { freq: 880, dur: 0.25 },
+  { freq: 698, dur: 0.25 }, { freq: 587, dur: 0.25 }, { freq: 0, dur: 0.25 },
+];
 
-// 经典模式音乐 - 轻快活泼
-const classicMusic = {
-  // 使用振荡器生成简单旋律
-  notes: [262, 294, 330, 349, 392, 349, 330, 294, 262, 0, 294, 330, 349, 392, 440, 392, 349, 330, 294, 0],
-  duration: 0.3,
+// 无尽模式 - 紧张快速
+const endlessMelody = [
+  { freq: 440, dur: 0.2 }, { freq: 523, dur: 0.2 }, { freq: 659, dur: 0.2 },
+  { freq: 523, dur: }, { freq: 0.2 440, dur: 0.2 }, { freq: 0, dur: 0.15 },
+  { freq: 494, dur: 0.2 }, { freq: 587, dur: 0.2 }, { freq: 698, dur: 0.2 },
+  { freq: 587, dur: 0.2 }, { freq: 494, dur: 0.2 }, { freq: 0, dur: 0.15 },
+];
+
+// 生存模式 - 悬疑低沉
+const survivalMelody = [
+  { freq: 220, dur: 0.35 }, { freq: 247, dur: 0.35 }, { freq: 277, dur: 0.35 },
+  { freq: 220, dur: 0.35 }, { freq: 0, dur: 0.2 },
+  { freq: 247, dur: 0.35 }, { freq: 277, dur: 0.35 }, { freq: 311, dur: 0.35 },
+  { freq: 247, dur: 0.35 }, { freq: 0, dur: 0.2 },
+];
+
+const getMelody = (mode: string) => {
+  switch (mode) {
+    case 'classic': return classicMelody;
+    case 'endless': return endlessMelody;
+    case 'survival': return survivalMelody;
+    default: return classicMelody;
+  }
 };
 
-// 无尽模式音乐 - 紧张刺激
-const endlessMusic = {
-  notes: [330, 349, 392, 440, 392, 349, 330, 349, 0, 330, 349, 392, 440, 523, 440, 392, 349, 330, 0, 0],
-  duration: 0.25,
-};
-
-// 生存模式音乐 - 紧张悬疑
-const survivalMusic = {
-  notes: [220, 247, 277, 311, 349, 311, 277, 247, 220, 0, 220, 247, 277, 311, 370, 311, 277, 247, 220, 0],
-  duration: 0.35,
-};
-
-// 播放音符
-const playNote = (frequency: number, duration: number, type: 'square' | 'sine' = 'sine') => {
-  if (typeof window === 'undefined') return;
+const createOscillator = (freq: number, duration: number, type: string = 'sine') => {
+  if (typeof window === 'undefined' || freq === 0) return;
   
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
-  
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  
-  oscillator.type = type;
-  oscillator.frequency.value = frequency;
-  
-  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-  
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + duration);
-};
-
-// 播放背景音乐（循环）
-export const playBackgroundMusic = async (mode: 'classic' | 'endless' | 'survival' | 'menu') => {
   try {
-    await stopBackgroundMusic();
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
     
-    const music = mode === 'classic' ? classicMusic : 
-                  mode === 'endless' ? endlessMusic : 
-                  mode === 'survival' ? survivalMusic : null;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
     
-    if (!music) return;
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
     
-    let currentNote = 0;
-    const playNextNote = () => {
-      if (music.notes[currentNote] > 0) {
-        playNote(music.notes[currentNote], music.duration, mode === 'endless' ? 'square' : 'sine');
-      }
-      currentNote = (currentNote + 1) % music.notes.length;
-    };
+    oscillator.type = type;
+    oscillator.frequency.value = freq;
     
-    // 播放循环
-    const interval = setInterval(playNextNote, music.duration * 1000);
+    gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
     
-    // 保存 interval ID 以便停止
-    (window as any).__bgMusicInterval = interval;
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + duration);
   } catch (e) {
     console.log('Audio error:', e);
   }
 };
 
-export const stopBackgroundMusic = async () => {
+export const playBackgroundMusic = (mode: string) => {
   try {
-    const interval = (window as any).__bgMusicInterval;
-    if (interval) {
-      clearInterval(interval);
-      (window as any).__bgMusicInterval = null;
-    }
-    if (backgroundMusic) {
-      await backgroundMusic.unloadAsync();
-      backgroundMusic = null;
-    }
+    stopBackgroundMusic();
+    
+    currentMode = mode;
+    isPlaying = true;
+    
+    const melody = getMelody(mode);
+    let noteIndex = 0;
+    
+    const playNote = () => {
+      if (!isPlaying) return;
+      
+      const note = melody[noteIndex];
+      if (note.freq > 0) {
+        createOscillator(note.freq, note.dur, mode === 'endless' ? 'square' : 'sine');
+      }
+      noteIndex = (noteIndex + 1) % melody.length;
+    };
+    
+    // 每300ms播放一个音符
+    musicInterval = setInterval(playNote, 300);
+    
   } catch (e) {
-    console.log('Stop music error:', e);
+    console.log('Music error:', e);
   }
 };
 
-// 播放点击音效
-export const playTapSound = () => {
-  playNote(800, 0.1, 'sine');
+export const stopBackgroundMusic = () => {
+  isPlaying = false;
+  currentMode = '';
+  if (musicInterval) {
+    clearInterval(musicInterval);
+    musicInterval = null;
+  }
 };
 
-// 播放正确音效
+// 音效
+export const playTapSound = () => createOscillator(600, 0.08);
+
 export const playCorrectSound = () => {
-  playNote(523, 0.1, 'sine');
-  setTimeout(() => playNote(659, 0.1, 'sine'), 100);
-  setTimeout(() => playNote(784, 0.15, 'sine'), 200);
+  createOscillator(523, 0.1);
+  setTimeout(() => createOscillator(659, 0.1), 100);
+  setTimeout(() => createOscillator(784, 0.15), 200);
 };
 
-// 播放错误音效
 export const playWrongSound = () => {
-  playNote(200, 0.2, 'square');
-  setTimeout(() => playNote(150, 0.3, 'square'), 200);
+  createOscillator(200, 0.25, 'square');
+  setTimeout(() => createOscillator(150, 0.35, 'square'), 200);
 };
 
-// 播放过关音效
 export const playLevelUpSound = () => {
   const notes = [523, 659, 784, 1047];
   notes.forEach((note, i) => {
-    setTimeout(() => playNote(note, 0.2, 'sine'), i * 150);
+    setTimeout(() => createOscillator(note, 0.2), i * 120);
   });
 };
 
-// 播放游戏结束音效
 export const playGameOverSound = () => {
   const notes = [400, 350, 300, 250, 200];
   notes.forEach((note, i) => {
-    setTimeout(() => playNote(note, 0.3, 'square'), i * 200);
+    setTimeout(() => createOscillator(note, 0.3, 'square'), i * 180);
   });
 };

@@ -134,6 +134,18 @@ const MemoryGameScreen: React.FC = () => {
   const gridConfig = GRID_CONFIGS[levelConfig.gridSize] || GRID_CONFIGS[3];
   const gridWidth = gridConfig.cellSize * levelConfig.gridSize + gridConfig.gap * (levelConfig.gridSize - 1);
 
+  // 主题渐变背景
+  const getBackgroundStyle = () => {
+    const themeGradients: Record<string, string[]> = {
+      animals: ['#1a1a2e', '#16213e', '#0f3460'],
+      fruits: ['#2d3436', '#00b894', '#00cec9'],
+      ocean: ['#0c2461', '#1e3799', '#0a3d62'],
+      space: ['#0f0f23', '#1a1a3e', '#2d3436'],
+    };
+    const colors = themeGradients[selectedTheme] || themeGradients.animals;
+    return { backgroundColor: colors[0] };
+  };
+
   useEffect(() => {
     if (gameState === 'playing' && (gameMode === 'survival' || gameMode === 'classic' || gameMode === 'endless') && timeLeft > 0) {
       timerRef.current = setTimeout(() => {
