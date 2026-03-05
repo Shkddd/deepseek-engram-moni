@@ -266,6 +266,8 @@ const MemoryGameScreen: React.FC = () => {
         const nextLevel = currentLevel + 1;
         setTimeout(() => {
           setCurrentLevel(nextLevel);
+          setCorrectCount(0);
+          setLives(gameMode === 'survival' ? 5 : 3);
           setGameOverReason(null);
           if (gameMode === 'survival') {
             const timeLimit = Math.max(10 - nextLevel, 2);
