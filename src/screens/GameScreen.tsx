@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   modeEmoji: { fontSize: 28 },
   modeTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', marginTop: 5 },
   modeDesc: { fontSize: 12, color: '#ddd', marginTop: 3 },
-  gameContainer: { flex: 1, alignItems: 'center', paddingTop: 30 },
+  gameContainer: { flex: 1, alignItems: 'center', paddingTop: 60 },
   exitBtn: { position: 'absolute', top: 15, left: 15, paddingHorizontal: 15, paddingVertical: 8, backgroundColor: '#333', borderRadius: 20 },
   exitBtnText: { color: '#fff', fontSize: 14 },
   header: { alignItems: 'center', marginBottom: 10 },
